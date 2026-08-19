@@ -44,7 +44,6 @@ body {
   color: #454545;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
 }
 
 a,
@@ -359,6 +358,10 @@ img.footer-logo {
   height: 36px;
 }
 
+.search-area {
+  max-width: 100%;
+}
+
 .search-area .btn-primary {
   background: var(--bs-primary) !important;
   border-color: var(--bs-primary) !important;
@@ -372,6 +375,8 @@ img.footer-logo {
   top: 0;
   z-index: 110;
   display: block !important;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .main-navbar.is-sticky {
@@ -784,6 +789,8 @@ section.mt-4 .img-zoom-hover img {
   border: 1px solid #e2e2e2;
   border-radius: 5px;
   height: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ===== 3 equal-height columns (left | mid | stories) ===== */
@@ -2150,14 +2157,24 @@ section.mt-4 .img-zoom-hover img {
 }
 
 .kk-article-page .container {
+  width: 100%;
   max-width: 1280px;
 }
 
 .kk-post-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
+  width: 100%;
+  max-width: 100%;
+}
+
+.kk-post-mid,
+.kk-post-right,
+.kk-news-body {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .kk-post-right {
@@ -2180,11 +2197,14 @@ section.mt-4 .img-zoom-hover img {
 }
 
 .news-details-breadcrumb {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   list-style: none;
   padding: 0;
   margin: 0 0 8px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .news-details-breadcrumb li {
@@ -2255,9 +2275,9 @@ section.mt-4 .img-zoom-hover img {
   border: 1px solid #e5e7eb;
   border-radius: 14px;
   box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
-  overflow-x: clip;
   height: auto;
   min-height: 0;
+  min-width: 0;
 }
 
 .kk-post-content,
@@ -2293,7 +2313,8 @@ section.mt-4 .img-zoom-hover img {
   line-height: 30px;
   color: #000;
   text-align: left;
-  overflow-x: clip;
+  min-width: 0;
+  max-width: 100%;
   overflow-wrap: break-word;
   word-break: normal;
   word-wrap: break-word;
@@ -2328,6 +2349,8 @@ section.mt-4 .img-zoom-hover img {
   margin: 8px 0;
   border-top: 1px solid #eee;
   border-bottom: 1px solid #eee;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .kk-share-icons {
@@ -2335,6 +2358,8 @@ section.mt-4 .img-zoom-hover img {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .kk-share-btn {
@@ -2527,9 +2552,11 @@ section.mt-4 .img-zoom-hover img {
 
 .kk-related-list a.kk-related-item {
   display: grid;
-  grid-template-columns: 5fr 7fr;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: 10px;
   align-items: start;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .kk-related-item .img-zoom-hover {
@@ -3013,7 +3040,8 @@ section.mt-4 .img-zoom-hover img {
 .ad-slider-slide {
   flex: 0 0 100%;
   width: 100%;
-  min-width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 @media (max-width: 991.98px) {
@@ -3542,9 +3570,12 @@ section.mt-4 .img-zoom-hover img {
 }
 
 /* ===== RESPONSIVE ===== */
-.site-shell {
-  overflow-x: hidden;
+.site-shell,
+main,
+#root {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .home-skeleton .sk-block {
@@ -4160,11 +4191,13 @@ section.mt-4 .img-zoom-hover img {
     line-height: 25px;
   }
 
-  /* wrap only at spaces; never split Bangla words mid-glyph */
+  /* wrap at spaces and punctuation; long URLs still break via link rules */
   .entry-content {
-    overflow-wrap: normal;
+    overflow-wrap: break-word;
     word-break: normal;
     hyphens: none;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .entry-content iframe,
@@ -4199,7 +4232,7 @@ section.mt-4 .img-zoom-hover img {
   }
 
   .kk-related-list a.kk-related-item {
-    grid-template-columns: 118px 1fr;
+    grid-template-columns: 118px minmax(0, 1fr);
     align-items: center;
   }
 
@@ -4303,7 +4336,7 @@ section.mt-4 .img-zoom-hover img {
   }
 
   .kk-related-list a.kk-related-item {
-    grid-template-columns: 104px 1fr;
+    grid-template-columns: 104px minmax(0, 1fr);
   }
 
   .kk-post-gallery-grid img {
@@ -4327,18 +4360,23 @@ section.mt-4 .img-zoom-hover img {
   }
 }
 
-/* Viewport safety — mobile/tablet only; desktop rules above are unchanged */
-html {
-  overflow-x: hidden;
-}
-
+/* Mobile article + layout overflow: constrain real min-widths, do not clip the page */
 @media (max-width: 991.98px) {
-  html,
-  body,
-  #root,
-  .site-shell {
+  .site-shell,
+  main,
+  .kk-article-page,
+  .kk-news-body,
+  .kk-post-grid,
+  .kk-post-mid,
+  .kk-post-right,
+  .kk-post-content,
+  .common-border-box,
+  .kk-ad-area,
+  .ad-slider,
+  .ad-slider-track,
+  .ad-slider-slide {
+    min-width: 0;
     max-width: 100%;
-    overflow-x: hidden;
   }
 
   .container,
@@ -4353,8 +4391,21 @@ html {
     padding-right: 12px !important;
   }
 
+  .search-area {
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  .search-area,
+  .search-area .form-control {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   img,
   video,
+  svg,
+  canvas,
   .img-fluid,
   .img-zoom-hover,
   .img-zoom-hover img,
@@ -4362,6 +4413,11 @@ html {
   .news-heading-pic img,
   .site-ad,
   .site-ad-side,
+  .site-ad-media,
+  .site-ad-media img,
+  .site-ad-media video,
+  .site-ad-html,
+  .site-ad-html-wrap,
   .ad-slider,
   .ad-frame,
   .ad-frame-mid,
@@ -4373,17 +4429,36 @@ html {
     max-width: 100% !important;
   }
 
+  .news-heading-pic img,
+  .entry-content img,
+  .entry-content figure,
+  .entry-content figure img {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .kk-post-gallery-grid img {
+    max-width: 100% !important;
+    width: 100%;
+  }
+
   .entry-content iframe,
-  .entry-content video {
+  .entry-content video,
+  .entry-content embed,
+  .entry-content object,
+  .entry-content .ql-video {
+    display: block;
     width: 100% !important;
     max-width: 100%;
     height: auto;
+    aspect-ratio: 16 / 9;
   }
 
-  .entry-content table,
-  .kk-post-content table {
+  .entry-content table {
     display: block;
     width: 100%;
+    max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -4396,8 +4471,24 @@ html {
     min-height: 0;
   }
 
-  .post-title {
-    margin-bottom: 6px;
+  .post-title,
+  .post-subtitle,
+  .kk-byline-line,
+  .entry-content,
+  .entry-content p,
+  .entry-content li,
+  .entry-content h2,
+  .entry-content h3,
+  .entry-content h4,
+  .section-title-flex h3 {
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    white-space: normal !important;
+  }
+
+  .entry-content a {
     overflow-wrap: anywhere;
     word-break: break-word;
   }
@@ -4405,6 +4496,11 @@ html {
   .kk-share-row {
     margin: 6px 0;
     padding: 8px 0;
+    width: 100%;
+  }
+
+  .kk-font-btns {
+    margin-left: 0;
   }
 
   .news-heading-pic {
@@ -4426,16 +4522,19 @@ html {
     max-width: 100%;
   }
 
-  .search-area,
-  .search-area .form-control {
-    min-width: 0;
-    max-width: 100%;
-  }
-
   .news-sm .title,
   .news-list .title,
-  .binodon-item-text .title {
+  .binodon-item-text .title,
+  .kk-related-item .title {
     overflow-wrap: break-word;
     word-break: break-word;
+    white-space: normal;
+  }
+
+  .section-title-flex h3,
+  .section-title-flex .page-title {
+    min-width: 0;
+    flex: 1 1 auto;
+    white-space: normal;
   }
 }

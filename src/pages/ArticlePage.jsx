@@ -24,6 +24,13 @@ function cleanArticleHtml(html = '') {
     .replace(/\u200B/g, '')
     .replace(/&shy;/gi, '')
     .replace(/white-space\s*:\s*nowrap/gi, 'white-space:normal')
+    .replace(/\smin-width\s*:\s*\d+px/gi, '')
+    .replace(/<(img|video|iframe|embed|object)([^>]*?)>/gi, (match, tag, attrs) => {
+      const cleaned = attrs
+        .replace(/\swidth\s*=\s*["']?\d+["']?/gi, '')
+        .replace(/\sheight\s*=\s*["']?\d+["']?/gi, '')
+      return `<${tag}${cleaned}>`
+    })
 }
 
 function PostMeta({ article, publisher }) {
