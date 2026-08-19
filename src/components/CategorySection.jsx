@@ -82,6 +82,72 @@ function Grid4({ title, slug, articles }) {
   )
 }
 
+function SpotlightThumbList({ items, text }) {
+  return items.map((item) => (
+    <div key={item.id} className="news-list binodon-item">
+      <Link to={articlePath(item)}>
+        <div className="binodon-item-row">
+          <div className="binodon-item-text">
+            <h4 className="title">{text(item.title, item.titleEn)}</h4>
+            {item.date ? <span>{item.date}</span> : null}
+          </div>
+          <div className="binodon-item-thumb">
+            <div className="img-zoom-hover">
+              <SafeImage src={item.image} alt={text(item.title, item.titleEn)} className="img-fluid" />
+            </div>
+          </div>
+        </div>
+      </Link>
+    </div>
+  ))
+}
+
+function SpotlightFeatured({ item, text }) {
+  if (!item) return null
+  return (
+    <div className="news-list pg-details binodon-featured-card">
+      <Link to={articlePath(item)}>
+        <div className="img-zoom-hover mb-2">
+          <SafeImage src={item.image} alt={text(item.title, item.titleEn)} className="img-fluid" />
+        </div>
+        <h4 className="title">{text(item.title, item.titleEn)}</h4>
+        {item.excerpt ? <p className="description">{text(item.excerpt, item.excerptEn)}</p> : null}
+        {item.date ? <span>{item.date}</span> : null}
+      </Link>
+    </div>
+  )
+}
+
+/** বিনোদন-style: left thumbs | center featured | right thumbs (full width) */
+function CategoryBinodon({ title, slug, articles }) {
+  const { text } = useLang()
+  const featured = articles[0]
+  const leftList = articles.slice(1, 4)
+  const rightList = articles.slice(4, 7)
+  if (!featured) return null
+
+  return (
+    <section className="mt-3 home-layout-binodon">
+      <div className="container">
+        <div className="common-border-box">
+          <SectionHead title={title} slug={slug} />
+          <div className="row binodon-inner">
+            <div className="col-lg-4 binodon-side">
+              <SpotlightThumbList items={leftList} text={text} />
+            </div>
+            <div className="col-lg-4 binodon-featured">
+              <SpotlightFeatured item={featured} text={text} />
+            </div>
+            <div className="col-lg-4 binodon-side">
+              <SpotlightThumbList items={rightList} text={text} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /** উচ্চ শিক্ষা — featured + thumb list + arrow list + sidebar */
 function CategorySpotlight({ title, slug, articles, latest, popular, adOffset = 2 }) {
   const { text } = useLang()
@@ -534,6 +600,24 @@ function CategoryOverlay({ title, slug, articles }) {
 
 export const HOME_LAYOUT_CYCLE = ['spotlight', 'heroGrid', 'featuredSplit', 'grid8', 'default']
 
+/** Homepage sections that use the বিনোদন 3-column layout */
+export const BINODON_LAYOUT_SLUGS = new Set([
+  'proshason',
+  'gobeshona',
+  'prani',
+  'pani',
+  'motso',
+  'bishesh',
+  'projukti',
+])
+
+export function usesBinodonLayout(cat) {
+  if (!cat) return false
+  if (BINODON_LAYOUT_SLUGS.has(cat.slug)) return true
+  const name = String(cat.name || '')
+  return name.includes('পানি সম্পদ')
+}
+
 export default function CategorySection({
   title,
   slug,
@@ -546,6 +630,9 @@ export default function CategorySection({
   if (!articles.length) return null
   if (variant === 'grid4') {
     return <Grid4 title={title} slug={slug} articles={articles} />
+  }
+  if (variant === 'binodon') {
+    return <CategoryBinodon title={title} slug={slug} articles={articles} />
   }
   if (variant === 'spotlight') {
     return (

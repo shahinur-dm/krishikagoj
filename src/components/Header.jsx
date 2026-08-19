@@ -2,51 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useSiteData } from '../context/SiteDataContext'
 import { useLang } from '../context/LanguageContext'
-import { BrandLogoLink, LogoMark, LOGO_SRC } from './BrandLogo'
+import { BrandLogoLink } from './BrandLogo'
 import LangSwitch from './LangSwitch'
 
 const DHAKA_TZ = 'Asia/Dhaka'
-
-function formatDateStamp(date, locale, extra = {}) {
-  return new Intl.DateTimeFormat(locale, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: DHAKA_TZ,
-    calendar: 'gregory',
-    ...extra,
-  }).format(date)
-}
-
-function StaticDateStrip({ now }) {
-  const bn = formatDateStamp(now, 'bn-BD')
-  const en = formatDateStamp(now, 'en-GB')
-  const ar = formatDateStamp(now, 'ar', { numberingSystem: 'arab' })
-
-  return (
-    <div className="live-date-strip d-print-none">
-      <div className="container">
-        <div className="live-date-strip-inner">
-          <span className="live-date-item" lang="bn">
-            <span className="live-date-flag">বাংলা</span>
-            {bn}
-          </span>
-          <span className="live-date-sep" aria-hidden="true" />
-          <span className="live-date-item" lang="en">
-            <span className="live-date-flag">EN</span>
-            {en}
-          </span>
-          <span className="live-date-sep" aria-hidden="true" />
-          <span className="live-date-item" lang="ar" dir="rtl">
-            <span className="live-date-flag">عربي</span>
-            {ar}
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export function SiteHeader() {
   const { categories, settings, subs } = useSiteData()
@@ -249,15 +208,11 @@ export function SiteHeader() {
         </div>
       </div>
 
-      <StaticDateStrip now={now} />
-
       <div className={`main-navbar d-print-none${scrolled ? ' fixed_nav is-sticky' : ''}`}>
         <div className="container">
           <div className="navbar-area d-flex align-items-center">
             <div className={`big-nav-logo${scrolled ? ' show' : ''}`}>
-              <Link to="/" className="logo" aria-label="কৃষিকাগজ প্রচ্ছদ">
-                <LogoMark src={LOGO_SRC} />
-              </Link>
+              <BrandLogoLink className="logo" />
             </div>
             <ul className="navbar-links-area hide-scrollbar" ref={navRailRef}>
               <li className="nav-item nav-home">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSiteData } from '../context/SiteDataContext'
 import LeadSection from '../components/LeadSection'
-import CategorySection, { HOME_LAYOUT_CYCLE } from '../components/CategorySection'
+import CategorySection, { HOME_LAYOUT_CYCLE, usesBinodonLayout } from '../components/CategorySection'
 import VideoGallerySection, { PhotoGallerySection } from '../components/VideoGallerySection'
 import SeoHead from '../components/SeoHead'
 import MidPageAds from '../components/MidPageAds'
@@ -110,7 +110,9 @@ export default function HomePage() {
       {showRest &&
         categoryBlocks.map(({ cat, articles }, index) => {
           if (!articles.length) return null
-          const variant = HOME_LAYOUT_CYCLE[index % HOME_LAYOUT_CYCLE.length]
+          const variant = usesBinodonLayout(cat)
+            ? 'binodon'
+            : HOME_LAYOUT_CYCLE[index % HOME_LAYOUT_CYCLE.length]
           return (
             <CategorySection
               key={cat._id}

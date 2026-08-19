@@ -9,22 +9,6 @@ import SiteSeoSnippets from './components/SiteSeoSnippets'
 import NavbarAdBanner from './components/NavbarAdBanner'
 import BottomAdBox from './components/BottomAdBox'
 
-function NoticeBar() {
-  const { settings } = useSiteData()
-  const notice = settings?.notice?.trim()
-  if (!notice) return null
-  return (
-    <div className="site-notice-bar">
-      <div className="container">
-        <p className="mb-0">
-          <i className="fa-solid fa-bullhorn me-2" />
-          {notice}
-        </p>
-      </div>
-    </div>
-  )
-}
-
 function Shell() {
   const [showTop, setShowTop] = useState(false)
   const { settings } = useSiteData()
@@ -53,7 +37,6 @@ function Shell() {
       <SiteSeoSnippets />
       <SiteHeader />
       <NavbarAdBanner />
-      <NoticeBar />
       <Ticker />
       <main>
         <Outlet />

@@ -36,7 +36,7 @@ export default function Sidebar({
 
   return (
     <aside className="sidebar">
-      <div className="common-border-box mb-3">
+      <div className={`common-border-box${compact ? '' : ' mb-3'}`}>
         <ul className="nav nav-pills mb-2 eb-side-pills" role="tablist">
           <li className="nav-item" role="presentation">
             <button

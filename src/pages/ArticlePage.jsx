@@ -26,43 +26,13 @@ function cleanArticleHtml(html = '') {
     .replace(/white-space\s*:\s*nowrap/gi, 'white-space:normal')
 }
 
-function ClockIcon() {
+function PostMeta({ article, publisher }) {
   return (
-    <svg className="kk-pub-icon" viewBox="0 0 13.95 16" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M13.65,5.2,7.78.27a1.26,1.26,0,0,0-1.56,0L.35,5.2c-.69.59-.2,1.59.79,1.59H12.86C13.85,6.79,14.34,5.79,13.65,5.2Z"
-        transform="translate(-0.03 0)"
-      />
-      <path
-        fill="currentColor"
-        d="M.35,10.8l5.87,4.93a1.26,1.26,0,0,0,1.56,0l5.87-4.93c.69-.59.2-1.59-.79-1.59H1.14C.15,9.21-.34,10.21.35,10.8Z"
-        transform="translate(-0.03 0)"
-      />
-    </svg>
-  )
-}
-
-function PostMeta({ article }) {
-  return (
-    <>
-      {article.author && (
-        <div className="kk-journalist">
-          <i className="fa-solid fa-circle-user" />
-          {article.author}
-        </div>
-      )}
-      {article.date && (
-        <div className="kk-publish">
-          <ClockIcon />
-          প্রকাশ : {article.date}
-        </div>
-      )}
-      <div className="kk-journalist">
-        <i className="fa-solid fa-square-pen" />
-        অনলাইন সংস্করণ
-      </div>
-    </>
+    <div className="kk-article-byline">
+      {publisher ? <p className="kk-byline-line">প্রকাশক: {publisher}</p> : null}
+      {article.date ? <p className="kk-byline-line">প্রকাশের তারিখ: {article.date}</p> : null}
+      <p className="kk-byline-line">অনলাইন সংস্করণ</p>
+    </div>
   )
 }
 
@@ -207,9 +177,11 @@ function RelatedNews({ article }) {
 
 function ArticleBlock({ article, isFirst, onFontChange, ads }) {
   const { t, text, isEn } = useLang()
+  const { settings } = useSiteData()
   const url = typeof window !== 'undefined' ? `${window.location.origin}${article.path}` : ''
   const gallery = article.raw?.images || []
   const title = text(article.title, article.titleEn)
+  const publisher = settings?.publisher || article.author || settings?.siteName || ''
 
   return (
     <section className={`kk-news-body${isFirst ? '' : ' kk-news-next'}`}>
@@ -234,11 +206,9 @@ function ArticleBlock({ article, isFirst, onFontChange, ads }) {
                   </>
                 )}
               </ul>
-              <div className="kk-post-meta-inline">
-                <PostMeta article={article} />
-              </div>
-
               <h1 className="post-title">{title}</h1>
+
+              <PostMeta article={article} publisher={publisher} />
 
               <ShareRow url={url} title={title} onFontChange={onFontChange} />
 
