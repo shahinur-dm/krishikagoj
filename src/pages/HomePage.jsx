@@ -110,9 +110,16 @@ export default function HomePage() {
       {showRest &&
         categoryBlocks.map(({ cat, articles }, index) => {
           if (!articles.length) return null
-          const variant = usesBinodonLayout(cat)
-            ? 'binodon'
-            : HOME_LAYOUT_CYCLE[index % HOME_LAYOUT_CYCLE.length]
+          const variant =
+            cat.slug === 'motso'
+              ? 'fisheries'
+              : cat.slug === 'prani'
+              ? 'livestock'
+              : cat.slug === 'gobeshona'
+              ? 'adminRows'
+              : usesBinodonLayout(cat)
+                ? 'binodon'
+                : HOME_LAYOUT_CYCLE[index % HOME_LAYOUT_CYCLE.length]
           return (
             <CategorySection
               key={cat._id}

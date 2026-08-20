@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useSiteData } from '../context/SiteDataContext'
 import { useLang } from '../context/LanguageContext'
@@ -7,16 +7,33 @@ import LangSwitch from './LangSwitch'
 
 const DHAKA_TZ = 'Asia/Dhaka'
 
+function CategoryLink({ cat, text, className, onClick, caret }) {
+  return (
+    <NavLink
+      to={`/category/${cat.slug}`}
+      onClick={onClick}
+      className={({ isActive }) => `${className}${isActive ? ' active' : ''}`}
+    >
+      {text(cat.name, cat.nameEn)}
+      {caret}
+    </NavLink>
+  )
+}
+
 export function SiteHeader() {
   const { categories, settings, subs } = useSiteData()
   const { t, text, isEn } = useLang()
   const navigate = useNavigate()
   const location = useLocation()
   const navRailRef = useRef(null)
+  const moreRef = useRef(null)
   const [megaOpen, setMegaOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [openAcc, setOpenAcc] = useState(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [q, setQ] = useState('')
   const [scrolled, setScrolled] = useState(false)
+  const [hiddenIds, setHiddenIds] = useState([])
   const [now] = useState(() => new Date())
 
   const social = settings?.social || {}
@@ -44,6 +61,11 @@ export function SiteHeader() {
     return map
   }, [subs])
 
+  const hiddenCats = useMemo(
+    () => navCats.filter((c) => hiddenIds.includes(String(c._id))),
+    [navCats, hiddenIds],
+  )
+
   useEffect(() => {
     function onScroll() {
       setScrolled(window.scrollY > 90)
@@ -53,20 +75,99 @@ export function SiteHeader() {
   }, [])
 
   useEffect(() => {
-    const rail = navRailRef.current
-    if (!rail) return
-    const active = rail.querySelector('.nav-link.active')
-    if (!active) return
-    const target = active.offsetLeft - (rail.clientWidth - active.offsetWidth) / 2
-    rail.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
-  }, [location.pathname, navCats.length])
+    setMegaOpen(false)
+    setMoreOpen(false)
+    setOpenAcc(null)
+  }, [location.pathname])
 
   useEffect(() => {
-    document.body.style.overflow = megaOpen ? 'hidden' : ''
+    function onKey(e) {
+      if (e.key !== 'Escape') return
+      setMegaOpen(false)
+      setMoreOpen(false)
+      setOpenAcc(null)
+    }
+    function onClick(e) {
+      if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false)
+      if (e.target.closest('.nav-mega') || e.target.closest('.kk-mega-panel')) return
+      if (e.target.closest('.kk-drawer') || e.target.closest('.expend-navbar')) return
+      setMegaOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onClick)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousedown', onClick)
+    }
+  }, [])
+
+  useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 991.98px)').matches
+    document.body.style.overflow = megaOpen && mobile ? 'hidden' : ''
     return () => {
       document.body.style.overflow = ''
     }
   }, [megaOpen])
+
+  useLayoutEffect(() => {
+    const list = navRailRef.current
+    if (!list) return
+
+    function fit() {
+      const catItems = Array.from(list.querySelectorAll(':scope > .nav-item[data-nav-id]'))
+      const more = list.querySelector(':scope > .nav-more')
+      const home = list.querySelector(':scope > .nav-home')
+      const mega = list.querySelector(':scope > .nav-mega')
+      if (!catItems.length) {
+        setHiddenIds([])
+        return
+      }
+
+      catItems.forEach((el) => el.classList.remove('nav-item-overflow'))
+      if (more) more.classList.add('is-idle')
+
+      const available = list.clientWidth
+      const homeW = home ? home.offsetWidth : 0
+      const megaW = mega ? mega.offsetWidth : 0
+      let used = homeW + megaW
+      const allFit = catItems.every((el) => {
+        used += el.offsetWidth
+        return used <= available - 2
+      })
+
+      if (allFit) {
+        setHiddenIds((prev) => (prev.length ? [] : prev))
+        return
+      }
+
+      if (more) more.classList.remove('is-idle')
+      const moreW = more ? more.offsetWidth : 96
+      used = homeW + megaW + moreW
+      const nextHidden = []
+      catItems.forEach((el) => {
+        if (used + el.offsetWidth <= available - 2) {
+          used += el.offsetWidth
+        } else {
+          el.classList.add('nav-item-overflow')
+          nextHidden.push(el.dataset.navId)
+        }
+      })
+      setHiddenIds((prev) => {
+        const same = prev.length === nextHidden.length && prev.every((id, i) => id === nextHidden[i])
+        return same ? prev : nextHidden
+      })
+    }
+
+    const ro = new ResizeObserver(fit)
+    ro.observe(list)
+    window.addEventListener('resize', fit)
+    document.fonts?.ready?.then(fit)
+    fit()
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', fit)
+    }
+  }, [navCats, scrolled, isEn])
 
   const displayDate = new Intl.DateTimeFormat(isEn ? 'en-GB' : 'bn-BD', {
     weekday: 'long',
@@ -75,6 +176,49 @@ export function SiteHeader() {
     day: 'numeric',
     timeZone: DHAKA_TZ,
   }).format(now)
+
+  function closeMenus() {
+    setMegaOpen(false)
+    setMoreOpen(false)
+    setOpenAcc(null)
+  }
+
+  function renderCatItem(cat) {
+    const catSubs = subMap[cat._id] || []
+    const overflow = hiddenIds.includes(String(cat._id))
+    if (catSubs.length) {
+      return (
+        <li
+          key={cat._id}
+          data-nav-id={cat._id}
+          className={`nav-item has-sub${overflow ? ' nav-item-overflow' : ''}`}
+        >
+          <CategoryLink
+            cat={cat}
+            text={text}
+            className="nav-link animated"
+            caret={<i className="fa-solid fa-chevron-down ms-1 sub-caret" />}
+          />
+          <ul className="nav-submenu">
+            {catSubs.map((s) => (
+              <li key={s._id}>
+                <Link to={`/category/${cat.slug}?sub=${s.slug}`}>{text(s.nameBn, s.nameEn)}</Link>
+              </li>
+            ))}
+          </ul>
+        </li>
+      )
+    }
+    return (
+      <li
+        key={cat._id}
+        data-nav-id={cat._id}
+        className={`nav-item${overflow ? ' nav-item-overflow' : ''}`}
+      >
+        <CategoryLink cat={cat} text={text} className="nav-link animated" />
+      </li>
+    )
+  }
 
   return (
     <header className={scrolled ? 'header-scrolled' : ''}>
@@ -186,7 +330,8 @@ export function SiteHeader() {
                 type="button"
                 className="nav-link expend-navbar border-0"
                 onClick={() => setMegaOpen(true)}
-                aria-label="Menu"
+                aria-expanded={megaOpen}
+                aria-label={t.menu}
               >
                 <i className="fa-solid fa-bars" />
               </button>
@@ -208,7 +353,7 @@ export function SiteHeader() {
         </div>
       </div>
 
-      <div className={`main-navbar d-print-none${scrolled ? ' fixed_nav is-sticky' : ''}`}>
+      <div className={`main-navbar navbar-desktop d-print-none${scrolled ? ' fixed_nav is-sticky' : ''}`}>
         <div className="container">
           <div className="navbar-area d-flex align-items-center">
             <div className={`big-nav-logo${scrolled ? ' show' : ''}`}>
@@ -226,45 +371,51 @@ export function SiteHeader() {
                   <i className="fa-solid fa-house" aria-hidden="true" />
                 </NavLink>
               </li>
-              {navCats.map((cat) => {
-                const catSubs = subMap[cat._id] || []
-                if (catSubs.length) {
-                  return (
-                    <li key={cat._id} className="nav-item has-sub">
-                      <NavLink
-                        to={`/category/${cat.slug}`}
-                        className={({ isActive }) => `nav-link animated${isActive ? ' active' : ''}`}
-                      >
-                        {text(cat.name, cat.nameEn)}
-                        <i className="fa-solid fa-chevron-down ms-1 sub-caret" />
-                      </NavLink>
-                      <ul className="nav-submenu">
-                        {catSubs.map((s) => (
-                          <li key={s._id}>
-                            <Link to={`/category/${cat.slug}?sub=${s.slug}`}>{text(s.nameBn, s.nameEn)}</Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
-                  )
-                }
-                return (
-                  <li key={cat._id} className="nav-item">
-                    <NavLink
-                      to={`/category/${cat.slug}`}
-                      className={({ isActive }) => `nav-link animated${isActive ? ' active' : ''}`}
-                    >
-                      {text(cat.name, cat.nameEn)}
-                    </NavLink>
-                  </li>
-                )
-              })}
-              <li className="nav-item d-none d-lg-block">
+              {navCats.map(renderCatItem)}
+              <li
+                ref={moreRef}
+                className={`nav-item has-sub nav-more${hiddenCats.length ? '' : ' is-idle'}${moreOpen ? ' is-open' : ''}`}
+              >
                 <button
                   type="button"
-                  className="nav-link border-0 bg-transparent"
-                  onClick={() => setMegaOpen(true)}
-                  aria-label="সব মেনু"
+                  className="nav-link animated border-0 bg-transparent"
+                  aria-expanded={moreOpen}
+                  aria-haspopup="true"
+                  onClick={() => setMoreOpen((v) => !v)}
+                >
+                  {t.more}
+                  <i className="fa-solid fa-chevron-down ms-1 sub-caret" />
+                </button>
+                <ul className="nav-submenu nav-more-menu">
+                  {hiddenCats.map((cat) => {
+                    const catSubs = subMap[cat._id] || []
+                    return (
+                      <li key={cat._id}>
+                        <Link to={`/category/${cat.slug}`} onClick={() => setMoreOpen(false)}>
+                          {text(cat.name, cat.nameEn)}
+                        </Link>
+                        {catSubs.map((s) => (
+                          <Link
+                            key={s._id}
+                            className="nav-more-sub"
+                            to={`/category/${cat.slug}?sub=${s.slug}`}
+                            onClick={() => setMoreOpen(false)}
+                          >
+                            {text(s.nameBn, s.nameEn)}
+                          </Link>
+                        ))}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </li>
+              <li className="nav-item nav-mega">
+                <button
+                  type="button"
+                  className={`nav-link border-0 bg-transparent${megaOpen ? ' active' : ''}`}
+                  onClick={() => setMegaOpen((v) => !v)}
+                  aria-expanded={megaOpen}
+                  aria-label={t.menu}
                 >
                   <i className="fa-solid fa-bars" />
                 </button>
@@ -272,52 +423,96 @@ export function SiteHeader() {
             </ul>
           </div>
         </div>
+
+        {megaOpen && (
+          <div className="kk-mega-desktop">
+            <div className="container">
+              <div className="kk-mega-panel" role="dialog" aria-label={t.categories}>
+                  {navCats.map((cat) => (
+                    <div key={cat._id} className="kk-mega-col">
+                      <Link to={`/category/${cat.slug}`} className="kk-mega-heading" onClick={closeMenus}>
+                        {text(cat.name, cat.nameEn)}
+                      </Link>
+                      <ul>
+                        {(subMap[cat._id] || []).map((s) => (
+                          <li key={s._id}>
+                            <Link to={`/category/${cat.slug}?sub=${s.slug}`} onClick={closeMenus}>
+                              {text(s.nameBn, s.nameEn)}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+        )}
       </div>
 
       {megaOpen && (
-        <div className="all-news-overlay" onClick={() => setMegaOpen(false)}>
-          <div className="dropdown-menu all-news-links show" onClick={(e) => e.stopPropagation()}>
-            <div className="tm-dt-area d-flex align-items-center justify-content-between w-100">
-              <div className="small pe-2">{displayDate}</div>
-              <button type="button" className="close-mb-nav border-0" onClick={() => setMegaOpen(false)}>
+        <div className="kk-drawer-overlay" onClick={closeMenus}>
+          <aside className="kk-drawer" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="kk-drawer-head">
+              <span>{displayDate}</span>
+              <button type="button" className="close-mb-nav border-0" onClick={closeMenus} aria-label="Close">
                 <i className="fa-solid fa-xmark" />
               </button>
             </div>
-            <div className="p-3">
-              <div className="row g-3">
-                {navCats.map((cat) => (
-                  <div key={cat._id} className="col-6 col-md-4 col-lg-3">
+            <nav className="kk-drawer-nav">
+              <NavLink to="/" end className="kk-drawer-link" onClick={closeMenus}>
+                <i className="fa-solid fa-house me-2" />
+                {t.home}
+              </NavLink>
+              {navCats.map((cat) => {
+                const catSubs = subMap[cat._id] || []
+                const expanded = openAcc === cat._id
+                if (!catSubs.length) {
+                  return (
                     <Link
+                      key={cat._id}
                       to={`/category/${cat.slug}`}
-                      className="fw-bold d-block mb-1"
-                      onClick={() => setMegaOpen(false)}
-                      style={{ color: 'var(--bs-primary)' }}
+                      className="kk-drawer-link"
+                      onClick={closeMenus}
                     >
                       {text(cat.name, cat.nameEn)}
                     </Link>
-                    <ul className="list-unstyled mb-0">
-                      {(subMap[cat._id] || []).map((s) => (
-                        <li key={s._id}>
-                          <Link
-                            to={`/category/${cat.slug}?sub=${s.slug}`}
-                            onClick={() => setMegaOpen(false)}
-                            className="small text-dark"
-                          >
-                            {text(s.nameBn, s.nameEn)}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                  )
+                }
+                return (
+                  <div key={cat._id} className={`kk-acc${expanded ? ' is-open' : ''}`}>
+                    <div className="kk-acc-row">
+                      <Link to={`/category/${cat.slug}`} className="kk-drawer-link" onClick={closeMenus}>
+                        {text(cat.name, cat.nameEn)}
+                      </Link>
+                      <button
+                        type="button"
+                        className="kk-acc-toggle"
+                        aria-expanded={expanded}
+                        onClick={() => setOpenAcc(expanded ? null : cat._id)}
+                      >
+                        <i className={`fa-solid ${expanded ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
+                      </button>
+                    </div>
+                    {expanded && (
+                      <ul className="kk-acc-sub">
+                        {catSubs.map((s) => (
+                          <li key={s._id}>
+                            <Link to={`/category/${cat.slug}?sub=${s.slug}`} onClick={closeMenus}>
+                              {text(s.nameBn, s.nameEn)}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                ))}
-              </div>
-              <div className="border-top pt-2 mt-3">
-                <Link to="/login" onClick={() => setMegaOpen(false)}>
-                  {t.login}
-                </Link>
-              </div>
-            </div>
-          </div>
+                )
+              })}
+              <Link to="/login" className="kk-drawer-link" onClick={closeMenus}>
+                {t.login}
+              </Link>
+            </nav>
+          </aside>
         </div>
       )}
     </header>
