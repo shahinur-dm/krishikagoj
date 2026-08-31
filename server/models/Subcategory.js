@@ -13,6 +13,10 @@ const subcategorySchema = new mongoose.Schema(
     },
     order: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    showOnHome: { type: Boolean, default: false },
+    homeOrder: { type: Number, default: 0 },
+    homeFeatured: { type: String, default: '' },
+    homeSecondary: { type: [String], default: () => [] },
   },
   { timestamps: true },
 )

@@ -4,8 +4,8 @@ import { useSiteData } from '../context/SiteDataContext'
 
 /** After main lead layout: show 2 ads side-by-side */
 export default function MidPageAds() {
-  const { ads } = useSiteData()
-  if (!adsForSlider(ads, 'mid_a').length) return null
+  const { ads, settings } = useSiteData()
+  if (!adsForSlider(ads, 'mid_a', settings).length) return null
 
   return (
     <div className="mid-page-ads d-print-none">

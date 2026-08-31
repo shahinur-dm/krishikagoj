@@ -55,6 +55,51 @@ const upload = multer({
   },
 })
 
+router.get(
+  '/',
+  requireAuth,
+  requirePermission('post', 'gallery', 'setting', 'allpost', 'ads'),
+  async (req, res) => {
+    try {
+      const page = Math.max(1, Number(req.query.page) || 1)
+      const limit = Math.min(36, Math.max(12, Number(req.query.limit) || 24))
+      const q = String(req.query.q || '').trim()
+      const filter = q
+        ? {
+            $or: [
+              { filename: { $regex: q, $options: 'i' } },
+              { publicId: { $regex: q, $options: 'i' } },
+            ],
+          }
+        : {}
+      const [docs, total] = await Promise.all([
+        Media.find(filter)
+          .select('filename mimeType size url secureUrl provider createdAt')
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean(),
+        Media.countDocuments(filter),
+      ])
+      res.json({
+        items: docs.map((doc) => ({
+          id: String(doc._id),
+          filename: doc.filename || '',
+          mimeType: doc.mimeType,
+          size: doc.size,
+          url: doc.secureUrl || doc.url || `/api/media/${doc._id}`,
+          createdAt: doc.createdAt,
+        })),
+        page,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      })
+    } catch (e) {
+      res.status(500).json({ message: e.message || 'মিডিয়া লোড ব্যর্থ' })
+    }
+  },
+)
+
 router.post(
   '/',
   requireAuth,

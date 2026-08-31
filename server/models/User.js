@@ -4,10 +4,15 @@ import bcrypt from 'bcryptjs'
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
+    username: { type: String, trim: true, lowercase: true, default: undefined },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 6 },
     facebookId: { type: String, default: '' },
-    role: { type: String, enum: ['superadmin', 'writer'], default: 'writer' },
+    role: {
+      type: String,
+      enum: ['superadmin', 'admin', 'editor', 'news_editor', 'writer'],
+      default: 'writer',
+    },
     permissions: {
       category: { type: Boolean, default: false },
       district: { type: Boolean, default: false },
@@ -17,13 +22,19 @@ const userSchema = new mongoose.Schema(
       gallery: { type: Boolean, default: false },
       ads: { type: Boolean, default: false },
       role: { type: Boolean, default: false },
+      users: { type: Boolean, default: false },
+      breaking: { type: Boolean, default: false },
+      actions: { type: mongoose.Schema.Types.Mixed, default: {} },
     },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true },
 )
 
+userSchema.index({ username: 1 }, { unique: true, sparse: true })
+
 userSchema.pre('save', async function hashPassword() {
+  if (!this.username) this.username = undefined
   if (!this.isModified('password')) return
   this.password = await bcrypt.hash(this.password, 10)
 })
@@ -36,6 +47,7 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
   return {
     _id: this._id,
     name: this.name,
+    username: this.username || '',
     email: this.email,
     facebookId: this.facebookId,
     role: this.role,

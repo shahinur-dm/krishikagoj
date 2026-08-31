@@ -50,5 +50,11 @@ export function applyArticleSeoDefaults(data, { isCreate = false } = {}) {
       .filter(Boolean)
       .join(', ')
   }
+  if (Object.prototype.hasOwnProperty.call(out, 'metaDescription')) {
+    out.metaDescription = String(out.metaDescription || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 500)
+  }
   return out
 }

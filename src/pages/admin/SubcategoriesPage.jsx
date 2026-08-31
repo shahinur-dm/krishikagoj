@@ -1,20 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../../api/client'
+import { refreshSiteData } from '../../context/SiteDataContext'
 
-const empty = { nameBn: '', nameEn: '', slug: '', category: '', order: 0, isActive: true }
+const empty = {
+  nameBn: '',
+  nameEn: '',
+  slug: '',
+  category: '',
+  order: 0,
+  isActive: true,
+  showOnHome: false,
+  homeOrder: 0,
+  homeFeatured: '',
+  homeSecondary: ['', ''],
+}
 
 export default function SubcategoriesPage() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
+  const [posts, setPosts] = useState([])
+  const [gridLimit, setGridLimit] = useState(8)
   const [form, setForm] = useState(empty)
   const [editingId, setEditingId] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const formRef = useRef(null)
 
   async function load() {
-    const [subs, cats] = await Promise.all([api.getAllSubcategories(), api.getAllCategories()])
+    const [subs, cats, settings, allPosts] = await Promise.all([
+      api.getAllSubcategories(),
+      api.getAllCategories(),
+      api.getSettings().catch(() => null),
+      api.getAdminArticles().catch(() => []),
+    ])
     setItems(subs)
     setCategories(cats.filter((c) => c.slug !== 'home'))
+    setGridLimit(Number(settings?.topicGridLimit) > 0 ? Number(settings.topicGridLimit) : 8)
+    setPosts(allPosts || [])
   }
 
   useEffect(() => {
@@ -35,7 +57,12 @@ export default function SubcategoriesPage() {
       category: item.category?._id || item.category,
       order: item.order || 0,
       isActive: item.isActive !== false,
+      showOnHome: item.showOnHome === true,
+      homeOrder: item.homeOrder || 0,
+      homeFeatured: item.homeFeatured || '',
+      homeSecondary: [item.homeSecondary?.[0] || '', item.homeSecondary?.[1] || ''],
     })
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
   function resetForm() {
@@ -47,15 +74,27 @@ export default function SubcategoriesPage() {
     e.preventDefault()
     setError('')
     try {
+      const payload = {
+        ...form,
+        homeSecondary: (form.homeSecondary || []).map((id) => String(id || '').trim()).filter(Boolean),
+      }
+      if (!String(payload.slug || '').trim()) {
+        payload.slug = String(payload.nameEn || '')
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      }
       if (editingId) {
-        await api.updateSubcategory(editingId, form)
+        await api.updateSubcategory(editingId, payload)
         flash('সাবক্যাটাগরি আপডেট হয়েছে')
       } else {
-        await api.createSubcategory(form)
+        await api.createSubcategory(payload)
         flash('সাবক্যাটাগরি যোগ হয়েছে')
       }
       resetForm()
       await load()
+      await refreshSiteData().catch(() => {})
     } catch (err) {
       setError(err.message)
     }
@@ -67,6 +106,7 @@ export default function SubcategoriesPage() {
       await api.deleteSubcategory(id)
       flash('মুছে ফেলা হয়েছে')
       await load()
+      await refreshSiteData().catch(() => {})
     } catch (err) {
       setError(err.message)
     }
@@ -79,9 +119,48 @@ export default function SubcategoriesPage() {
 
       <div className="admin-card">
         <div className="admin-card-header">
-          <h3>{editingId ? 'সাবক্যাটাগরি সম্পাদনা' : 'নতুন সাবক্যাটাগরি'}</h3>
+          <h3>হোমপেজ টপিক গ্রিড</h3>
         </div>
         <div className="admin-card-body">
+          <p style={{ marginTop: 0, color: '#64748b', fontSize: 14 }}>
+            হোমপেজের ৪×২ ক্যাটাগরি কার্ডগুলো এখান থেকে নিয়ন্ত্রণ করুন। নতুন কার্ড যোগ করতে নিচের ফর্মে
+            সাবক্যাটাগরি তৈরি করে “হোমপেজ গ্রিডে দেখান” টিক দিন। নিষ্ক্রিয় বা টিকহীন কার্ড খালি ঘর রেখে যাবে না।
+          </p>
+          <div className="admin-form-row">
+            <div className="admin-form-group">
+              <label>হোমপেজে সর্বোচ্চ কার্ড (ডিফল্ট ৮)</label>
+              <input
+                type="number"
+                min={1}
+                max={16}
+                value={gridLimit}
+                onChange={(e) => setGridLimit(Number(e.target.value) || 8)}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="admin-btn admin-btn-primary"
+            onClick={async () => {
+              try {
+                await api.updateTopicGridConfig({ topicGridLimit: gridLimit })
+                flash('গ্রিড লিমিট সংরক্ষণ হয়েছে')
+                await refreshSiteData().catch(() => {})
+              } catch (err) {
+                setError(err.message)
+              }
+            }}
+          >
+            লিমিট সেভ করুন
+          </button>
+        </div>
+      </div>
+
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <h3>{editingId ? 'সাবক্যাটাগরি সম্পাদনা' : 'নতুন সাবক্যাটাগরি'}</h3>
+        </div>
+        <div className="admin-card-body" ref={formRef}>
           <form onSubmit={handleSubmit}>
             <div className="admin-form-row">
               <div className="admin-form-group">
@@ -100,11 +179,11 @@ export default function SubcategoriesPage() {
                 />
               </div>
               <div className="admin-form-group">
-                <label>স্লাগ *</label>
+                <label>স্লাগ</label>
                 <input
                   value={form.slug}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  required
+                  placeholder="খালি রাখলে স্বয়ংক্রিয় তৈরি হবে"
                 />
               </div>
               <div className="admin-form-group">
@@ -130,6 +209,69 @@ export default function SubcategoriesPage() {
                   onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
                 />
               </div>
+              <div className="admin-form-group">
+                <label>হোমপেজ পজিশন</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={form.homeOrder}
+                  onChange={(e) => setForm({ ...form, homeOrder: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label>ফিচার্ড খবর</label>
+                <select
+                  value={form.homeFeatured}
+                  onChange={(e) => setForm({ ...form, homeFeatured: e.target.value })}
+                >
+                  <option value="">স্বয়ংক্রিয় / সর্বশেষ</option>
+                  {posts
+                    .filter((p) => !form.category || String(p.category?._id || p.category) === String(form.category))
+                    .map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.title}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="admin-form-group">
+                <label>সেকেন্ডারি খবর ১</label>
+                <select
+                  value={form.homeSecondary[0] || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, homeSecondary: [e.target.value, form.homeSecondary[1] || ''] })
+                  }
+                >
+                  <option value="">স্বয়ংক্রিয়</option>
+                  {posts
+                    .filter((p) => !form.category || String(p.category?._id || p.category) === String(form.category))
+                    .map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.title}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="admin-form-group">
+                <label>সেকেন্ডারি খবর ২</label>
+                <select
+                  value={form.homeSecondary[1] || ''}
+                  onChange={(e) =>
+                    setForm({ ...form, homeSecondary: [form.homeSecondary[0] || '', e.target.value] })
+                  }
+                >
+                  <option value="">স্বয়ংক্রিয়</option>
+                  {posts
+                    .filter((p) => !form.category || String(p.category?._id || p.category) === String(form.category))
+                    .map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.title}
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
               <input
@@ -138,6 +280,14 @@ export default function SubcategoriesPage() {
                 onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
               />
               সক্রিয়
+            </label>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, marginLeft: 16 }}>
+              <input
+                type="checkbox"
+                checked={form.showOnHome}
+                onChange={(e) => setForm({ ...form, showOnHome: e.target.checked })}
+              />
+              হোমপেজ গ্রিডে দেখান
             </label>
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
               <button type="submit" className="admin-btn admin-btn-primary">
@@ -165,6 +315,8 @@ export default function SubcategoriesPage() {
                 <th>নাম</th>
                 <th>ক্যাটাগরি</th>
                 <th>স্লাগ</th>
+                <th>হোম</th>
+                <th>পজিশন</th>
                 <th>স্ট্যাটাস</th>
                 <th>অ্যাকশন</th>
               </tr>
@@ -176,6 +328,8 @@ export default function SubcategoriesPage() {
                   <td>{item.nameBn}</td>
                   <td>{item.category?.name || '—'}</td>
                   <td>{item.slug}</td>
+                  <td>{item.showOnHome ? 'হ্যাঁ' : 'না'}</td>
+                  <td>{item.homeOrder || item.order || 0}</td>
                   <td>{item.isActive !== false ? 'সক্রিয়' : 'নিষ্ক্রিয়'}</td>
                   <td className="admin-table-actions">
                     <button

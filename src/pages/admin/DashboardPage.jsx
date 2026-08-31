@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, formatBnDate } from '../../api/client'
 import SafeImage from '../../components/SafeImage'
+import ImageUploadField from '../../components/admin/ImageUploadField'
 import { useAuth } from '../../context/AuthContext'
 import { useLang } from '../../context/LanguageContext'
+import { refreshSiteData, useSiteData } from '../../context/SiteDataContext'
 
 function can(user, perm) {
   if (!user) return false
@@ -23,8 +25,13 @@ function fmt(n, isEn) {
 export default function DashboardPage() {
   const { user } = useAuth()
   const { t, isEn } = useLang()
+  const { settings } = useSiteData()
   const [stats, setStats] = useState(null)
   const [error, setError] = useState('')
+  const [logo, setLogo] = useState('')
+  const [logoMsg, setLogoMsg] = useState('')
+  const [logoErr, setLogoErr] = useState('')
+  const [logoSaving, setLogoSaving] = useState(false)
 
   useEffect(() => {
     api
@@ -35,15 +42,17 @@ export default function DashboardPage() {
 
   const links = useMemo(() => {
     const all = [
-      { to: '/admin/posts/new', label: t.newPost, desc: t.newPostDesc, icon: '✏️', perm: 'post', tone: 'primary' },
-      { to: '/admin/posts', label: t.navAllPosts, desc: t.allPostsDesc, icon: '📰', perm: 'post', tone: 'blue' },
-      { to: '/admin/home-lead', label: t.navHomeLead, desc: t.homeLeadDesc, icon: '📌', perm: ['setting', 'post'], tone: 'teal' },
-      { to: '/admin/categories', label: t.navCategories, desc: t.catDesc, icon: '📁', perm: 'category', tone: 'teal' },
-      { to: '/admin/photos', label: t.navPhotos, desc: t.photoDesc, icon: '🖼️', perm: 'gallery', tone: 'purple' },
-      { to: '/admin/videos', label: t.videos, desc: t.videoDesc, icon: '🎬', perm: 'gallery', tone: 'pink' },
-      { to: '/admin/website', label: t.navWebsite, desc: t.siteDesc, icon: '⚙️', perm: 'setting', tone: 'slate' },
-      { to: '/admin/writers', label: t.navWriters, desc: t.writerDesc, icon: '✍️', role: 'superadmin', tone: 'green' },
-      { to: '/', label: t.viewSite, desc: t.siteLiveDesc, icon: '🌐', any: true, tone: 'gold' },
+      { to: '/admin/posts/new', label: t.newPost, desc: t.newPostDesc, icon: 'fa-solid fa-pen-to-square', perm: 'post', tone: 'primary' },
+      { to: '/admin/posts', label: t.navAllPosts, desc: t.allPostsDesc, icon: 'fa-solid fa-newspaper', perm: 'post', tone: 'blue' },
+      { to: '/admin/home-lead', label: t.navHomeLead, desc: t.homeLeadDesc, icon: 'fa-solid fa-table-columns', perm: ['setting', 'post'], tone: 'teal' },
+      { to: '/admin/categories', label: t.navCategories, desc: t.catDesc, icon: 'fa-solid fa-folder', perm: 'category', tone: 'teal' },
+      { to: '/admin/photos', label: t.navPhotos, desc: t.photoDesc, icon: 'fa-regular fa-image', perm: 'gallery', tone: 'purple' },
+      { to: '/admin/videos', label: t.videos, desc: t.videoDesc, icon: 'fa-solid fa-clapperboard', perm: 'gallery', tone: 'pink' },
+      { to: '/admin/website', label: t.navWebsite, desc: t.siteDesc, icon: 'fa-solid fa-gear', perm: 'setting', tone: 'slate' },
+      { to: '/admin/breaking', label: t.navBreaking, desc: t.navBreaking, icon: 'fa-solid fa-bolt', perm: ['breaking', 'post', 'setting'], tone: 'orange' },
+      { to: '/admin/users', label: t.navUsers, desc: t.navUsersSec, icon: 'fa-solid fa-user-gear', perm: ['users', 'role'], tone: 'green' },
+      { to: '/admin/writers', label: t.navWriters, desc: t.writerDesc, icon: 'fa-solid fa-feather', role: 'superadmin', tone: 'green' },
+      { to: '/', label: t.viewSite, desc: t.siteLiveDesc, icon: 'fa-solid fa-arrow-up-right-from-square', any: true, tone: 'gold' },
     ]
     return all.filter((l) => {
       if (l.any) return true
@@ -66,27 +75,75 @@ export default function DashboardPage() {
   const greet = hour < 12 ? t.greetMorning : hour < 18 ? t.greetAfternoon : t.greetEvening
 
   const heroCards = [
-    { label: t.totalPosts, value: stats.posts, sub: `${fmt(stats.published, isEn)} ${t.published}`, icon: '📰', tone: 'blue' },
-    { label: t.totalViews, value: stats.totalViews, sub: t.viewsSum, icon: '👁️', tone: 'green' },
-    { label: t.todayPosts, value: stats.postsToday, sub: `${t.in7days} ${fmt(stats.postsThisWeek, isEn)}`, icon: '📅', tone: 'orange' },
-    { label: t.drafts, value: stats.drafts, sub: `${fmt(stats.pendingWriters, isEn)} ${t.pendingWriters}`, icon: '📝', tone: 'rose' },
+    { label: t.totalPosts, value: stats.posts, sub: `${fmt(stats.published, isEn)} ${t.published}`, icon: 'fa-solid fa-newspaper', tone: 'blue' },
+    { label: t.totalViews, value: stats.totalViews, sub: t.viewsSum, icon: 'fa-regular fa-eye', tone: 'green' },
+    { label: t.todayPosts, value: stats.postsToday, sub: `${t.in7days} ${fmt(stats.postsThisWeek, isEn)}`, icon: 'fa-regular fa-calendar', tone: 'orange' },
+    { label: t.drafts, value: stats.drafts, sub: `${fmt(stats.pendingWriters, isEn)} ${t.pendingWriters}`, icon: 'fa-regular fa-file-lines', tone: 'rose' },
   ]
 
   const miniCards = [
-    { label: t.navCategories, value: stats.categories, to: '/admin/categories', icon: '📁' },
-    { label: t.navSubcategories, value: stats.subcategories, to: '/admin/subcategories', icon: '📂' },
-    { label: t.headlines, value: stats.headlines, to: '/admin/posts', icon: '⚡' },
-    { label: t.featured, value: stats.featured, to: '/admin/posts', icon: '⭐' },
-    { label: t.popular, value: stats.popular, to: '/admin/posts', icon: '🔥' },
-    { label: t.photos, value: stats.photos, to: '/admin/photos', icon: '🖼️' },
-    { label: t.videos, value: stats.videos, to: '/admin/videos', icon: '🎬' },
-    { label: t.staff, value: stats.staff, to: '/admin/staff', icon: '👥' },
-    { label: t.writers, value: stats.writers, to: '/admin/writers', icon: '✍️' },
-    { label: t.websites, value: stats.websites, to: '/admin/important-websites', icon: '🔗' },
+    { label: t.navCategories, value: stats.categories, to: '/admin/categories', icon: 'fa-solid fa-folder' },
+    { label: t.navSubcategories, value: stats.subcategories, to: '/admin/subcategories', icon: 'fa-solid fa-folder-tree' },
+    { label: t.headlines, value: stats.headlines, to: '/admin/posts', icon: 'fa-solid fa-bolt' },
+    { label: t.featured, value: stats.featured, to: '/admin/posts', icon: 'fa-regular fa-star' },
+    { label: t.popular, value: stats.popular, to: '/admin/posts', icon: 'fa-solid fa-fire' },
+    { label: t.photos, value: stats.photos, to: '/admin/photos', icon: 'fa-regular fa-image' },
+    { label: t.videos, value: stats.videos, to: '/admin/videos', icon: 'fa-solid fa-clapperboard' },
+    { label: t.staff, value: stats.staff, to: '/admin/staff', icon: 'fa-solid fa-users' },
+    { label: t.writers, value: stats.writers, to: '/admin/writers', icon: 'fa-solid fa-feather' },
+    { label: t.websites, value: stats.websites, to: '/admin/important-websites', icon: 'fa-solid fa-link' },
   ]
+
+  const currentLogo = logo || settings?.logo || '/logo.png'
+  const canLogo = can(user, 'setting')
+
+  async function saveLogo(nextUrl) {
+    setLogo(nextUrl)
+    setLogoErr('')
+    setLogoMsg('')
+    setLogoSaving(true)
+    try {
+      await api.updateSettings({ logo: nextUrl || '/logo.png' })
+      await refreshSiteData().catch(() => {})
+      setLogoMsg(isEn ? 'Logo updated' : 'লোগো আপডেট হয়েছে')
+      setTimeout(() => setLogoMsg(''), 2500)
+    } catch (err) {
+      setLogoErr(err.message)
+    } finally {
+      setLogoSaving(false)
+    }
+  }
 
   return (
     <div className="dash">
+      {canLogo ? (
+        <section className="dash-logo-card">
+          <div className="dash-logo-preview">
+            <span className="dash-logo-kicker">{isEn ? 'Site logo' : 'সাইট লোগো'}</span>
+            <div className="dash-logo-frame">
+              <SafeImage src={currentLogo} alt="কৃষিকাগজ" />
+            </div>
+          </div>
+          <div className="dash-logo-actions">
+            <h3>{isEn ? 'Upload / change logo' : 'লোগো আপলোড / পরিবর্তন'}</h3>
+            <p>
+              {isEn
+                ? 'This uses the existing website logo setting. The public site will show the saved logo.'
+                : 'বিদ্যমান ওয়েবসাইট লোগো সেটিং ব্যবহার করা হয়। সংরক্ষণের পর পাবলিক সাইটে দেখাবে।'}
+            </p>
+            {logoMsg ? <div className="admin-alert admin-alert-success">{logoMsg}</div> : null}
+            {logoErr ? <div className="admin-alert admin-alert-error">{logoErr}</div> : null}
+            <ImageUploadField
+              label={isEn ? 'Logo image' : 'লোগো ছবি'}
+              value={currentLogo === '/logo.png' && !logo ? settings?.logo || '' : currentLogo}
+              onChange={saveLogo}
+              libraryPicker
+              hint={logoSaving ? (isEn ? 'Saving…' : 'সংরক্ষণ হচ্ছে...') : undefined}
+            />
+          </div>
+        </section>
+      ) : null}
+
       <section className="dash-hero">
         <div>
           <p className="dash-hero-greet">
@@ -109,7 +166,9 @@ export default function DashboardPage() {
       <section className="dash-hero-grid">
         {heroCards.map((c) => (
           <article key={c.label} className={`dash-kpi dash-kpi-${c.tone}`}>
-            <div className="dash-kpi-icon">{c.icon}</div>
+            <div className="dash-kpi-icon">
+              <i className={c.icon} aria-hidden="true" />
+            </div>
             <div>
               <p className="dash-kpi-label">{c.label}</p>
               <h2>{fmt(c.value, isEn)}</h2>
@@ -122,7 +181,9 @@ export default function DashboardPage() {
       <section className="dash-mini-grid">
         {miniCards.map((c) => (
           <Link key={c.label} to={c.to} className="dash-mini">
-            <span className="dash-mini-icon">{c.icon}</span>
+            <span className="dash-mini-icon">
+              <i className={c.icon} aria-hidden="true" />
+            </span>
             <strong>{fmt(c.value, isEn)}</strong>
             <span>{c.label}</span>
           </Link>
@@ -235,7 +296,9 @@ export default function DashboardPage() {
         <div className="admin-card-body dash-actions">
           {links.map((l) => (
             <Link key={l.to} to={l.to} className={`dash-action dash-action-${l.tone}`}>
-              <span className="dash-action-icon">{l.icon}</span>
+              <span className="dash-action-icon">
+                <i className={l.icon} aria-hidden="true" />
+              </span>
               <span>
                 <strong>{l.label}</strong>
                 <small>{l.desc}</small>

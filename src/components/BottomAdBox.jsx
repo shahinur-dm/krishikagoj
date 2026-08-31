@@ -6,8 +6,8 @@ import { useSiteData } from '../context/SiteDataContext'
 const SESSION_KEY = 'kk_bottom_ad_dismissed_v2'
 
 export default function BottomAdBox() {
-  const { ads } = useSiteData()
-  const list = adsForSlider(ads, 'bottom')
+  const { ads, settings } = useSiteData()
+  const list = adsForSlider(ads, 'bottom', settings)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {

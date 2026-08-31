@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import AdCard, { adsForSlider } from './AdCard'
+import { useSiteData } from '../context/SiteDataContext'
 
 const INTERVAL_MS = 10_000
 
 /** Right-to-left rotating ads — one after another every 10s */
 export default function AdSlider({ ads = [], position, variant = 'banner', startOffset = 0 }) {
-  const list = adsForSlider(ads, position)
+  const { settings } = useSiteData()
+  const list = adsForSlider(ads, position, settings)
   const [index, setIndex] = useState(() => (list.length ? startOffset % list.length : 0))
 
   useEffect(() => {

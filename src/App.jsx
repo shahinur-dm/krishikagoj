@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { LanguageProvider, useLang } from './context/LanguageContext'
+import { SiteDataProvider } from './context/SiteDataContext'
 import ProtectedRoute from './components/admin/ProtectedRoute'
 import Layout from './Layout'
 import HomePage from './pages/HomePage'
@@ -34,6 +35,20 @@ const SocialPage = lazy(() => import('./pages/admin/SocialPage'))
 const SeoPage = lazy(() => import('./pages/admin/SeoPage'))
 const AdsPage = lazy(() => import('./pages/admin/AdsPage'))
 const ImportantWebsitesPage = lazy(() => import('./pages/admin/ImportantWebsitesPage'))
+const BreakingNewsPage = lazy(() => import('./pages/admin/BreakingNewsPage'))
+const UsersPage = lazy(() => import('./pages/admin/UsersPage'))
+const UserFormPage = lazy(() => import('./pages/admin/UserFormPage'))
+const RolesPage = lazy(() => import('./pages/admin/RolesPage'))
+const PermissionsPage = lazy(() => import('./pages/admin/PermissionsPage'))
+const LoginLogoPage = lazy(() => import('./pages/admin/LoginLogoPage'))
+const TopicGridPage = lazy(() => import('./pages/admin/TopicGridPage'))
+const AiSettingsPage = lazy(() => import('./pages/admin/AiSettingsPage'))
+const OpinionAdminPage = lazy(() => import('./pages/admin/OpinionAdminPage'))
+const PollAdminPage = lazy(() => import('./pages/admin/PollAdminPage'))
+const SurveyAdminPage = lazy(() => import('./pages/admin/SurveyAdminPage'))
+const CmsPageAdminPage = lazy(() => import('./pages/admin/CmsPageAdminPage'))
+const CmsPageView = lazy(() => import('./pages/CmsPageView'))
+const SurveyView = lazy(() => import('./pages/SurveyView'))
 
 function AdminFallback() {
   const { t } = useLang()
@@ -46,9 +61,10 @@ function AdminFallback() {
 
 export default function App() {
   return (
+    <BrowserRouter>
     <LanguageProvider>
     <AuthProvider>
-      <BrowserRouter>
+    <SiteDataProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
@@ -83,14 +99,37 @@ export default function App() {
             <Route path="writers" element={<WritersPage />} />
             <Route path="password" element={<PasswordPage />} />
             <Route path="website" element={<WebsiteSettingsPage />} />
+            <Route path="login-logo" element={<LoginLogoPage />} />
             <Route path="livetv" element={<LiveTvPage />} />
             <Route path="namaz" element={<NamazPage />} />
             <Route path="notice" element={<NoticePage />} />
             <Route path="social" element={<SocialPage />} />
             <Route path="home-lead" element={<HomeLeadPage />} />
+            <Route path="topic-grid" element={<TopicGridPage />} />
+            <Route path="ai" element={<AiSettingsPage />} />
+            <Route path="opinions" element={<OpinionAdminPage />} />
+            <Route path="opinions/new" element={<OpinionAdminPage />} />
+            <Route path="opinions/:id" element={<OpinionAdminPage />} />
+            <Route path="polls" element={<PollAdminPage />} />
+            <Route path="polls/new" element={<PollAdminPage />} />
+            <Route path="polls/:id/results" element={<PollAdminPage />} />
+            <Route path="polls/:id" element={<PollAdminPage />} />
+            <Route path="surveys" element={<SurveyAdminPage />} />
+            <Route path="surveys/new" element={<SurveyAdminPage />} />
+            <Route path="surveys/:id/results" element={<SurveyAdminPage />} />
+            <Route path="surveys/:id" element={<SurveyAdminPage />} />
+            <Route path="pages" element={<CmsPageAdminPage />} />
+            <Route path="pages/new" element={<CmsPageAdminPage />} />
+            <Route path="pages/:id" element={<CmsPageAdminPage />} />
             <Route path="seo" element={<SeoPage />} />
             <Route path="ads" element={<AdsPage />} />
             <Route path="important-websites" element={<ImportantWebsitesPage />} />
+            <Route path="breaking" element={<BreakingNewsPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="users/new" element={<UserFormPage />} />
+            <Route path="users/:id" element={<UserFormPage />} />
+            <Route path="roles" element={<RolesPage />} />
+            <Route path="permissions" element={<PermissionsPage />} />
           </Route>
 
           <Route element={<Layout />}>
@@ -100,10 +139,14 @@ export default function App() {
             <Route path="news/:id" element={<ArticlePage />} />
             <Route path="videos" element={<VideosPage />} />
             <Route path="photos" element={<PhotosPage />} />
+            <Route path="page/:slug" element={<CmsPageView />} />
+            <Route path="survey" element={<SurveyView />} />
+            <Route path="survey/:id" element={<SurveyView />} />
           </Route>
         </Routes>
-      </BrowserRouter>
+    </SiteDataProvider>
     </AuthProvider>
     </LanguageProvider>
+    </BrowserRouter>
   )
 }

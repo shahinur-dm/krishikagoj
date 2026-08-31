@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, mapArticle } from '../../api/client'
 import SafeImage from '../../components/SafeImage'
 import { useLang } from '../../context/LanguageContext'
+import { emptyItems, sectionSlotMeta, sectionVariant } from '../../lib/sectionLayouts'
 
 const EMPTY = {
   lead: '',
@@ -30,11 +31,12 @@ function parseKey(key) {
   return { type: key }
 }
 
-function getAt(slots, ref) {
+function getAt(slots, ref, items = []) {
   if (ref.type === 'lead' || ref.type === 'story') return slots[ref.type] || ''
   if (ref.type === 'grid' || ref.type === 'mid' || ref.type === 'storyList') {
     return slots[ref.type][ref.index] || ''
   }
+  if (ref.type === 'items') return items[ref.index] || ''
   return ''
 }
 
@@ -88,6 +90,18 @@ function SlotCard({ article, label, slotKey, variant = 'sm', onClear, onChoose, 
             >
               বেছে নিন
             </button>
+            {article?.path ? (
+              <a
+                className="hl-slot-choose"
+                href={article.path}
+                target="_blank"
+                rel="noreferrer"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                দেখে নিন
+              </a>
+            ) : null}
             <button
               type="button"
               className="hl-slot-delete"
@@ -123,8 +137,12 @@ function SlotCard({ article, label, slotKey, variant = 'sm', onClear, onChoose, 
 
 export default function HomeLeadPage() {
   const { t } = useLang()
+  const [pageKey, setPageKey] = useState('home')
+  const [categories, setCategories] = useState([])
+  const [settingsDoc, setSettingsDoc] = useState(null)
   const [articles, setArticles] = useState([])
   const [slots, setSlots] = useState(EMPTY)
+  const [items, setItems] = useState([])
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -134,6 +152,14 @@ export default function HomeLeadPage() {
   const [pickerSlot, setPickerSlot] = useState('')
   const [pickerQ, setPickerQ] = useState('')
 
+  const selectedCat = useMemo(
+    () => categories.find((c) => c.slug === pageKey) || null,
+    [categories, pageKey],
+  )
+  const catIndex = Math.max(0, categories.findIndex((c) => c.slug === pageKey))
+  const variant = pageKey === 'home' ? 'home' : sectionVariant(selectedCat, catIndex)
+  const meta = pageKey === 'home' ? null : sectionSlotMeta(variant)
+
   const byId = useMemo(() => {
     const m = new Map()
     articles.forEach((a) => m.set(a.id, a))
@@ -142,11 +168,15 @@ export default function HomeLeadPage() {
 
   const used = useMemo(() => {
     const s = new Set()
-    ;[slots.lead, slots.story, ...slots.grid, ...slots.mid, ...slots.storyList]
-      .filter(Boolean)
-      .forEach((id) => s.add(id))
+    if (pageKey === 'home') {
+      ;[slots.lead, slots.story, ...slots.grid, ...slots.mid, ...slots.storyList]
+        .filter(Boolean)
+        .forEach((id) => s.add(id))
+    } else {
+      items.filter(Boolean).forEach((id) => s.add(id))
+    }
     return s
-  }, [slots])
+  }, [pageKey, slots, items])
 
   const pool = useMemo(() => {
     const term = q.trim().toLowerCase()
@@ -162,7 +192,7 @@ export default function HomeLeadPage() {
 
   const pickerList = useMemo(() => {
     const term = pickerQ.trim().toLowerCase()
-    const currentId = pickerSlot ? getAt(slots, parseKey(pickerSlot)) : ''
+    const currentId = pickerSlot ? getAt(slots, parseKey(pickerSlot), items) : ''
     return articles.filter((a) => {
       if (used.has(a.id) && a.id !== currentId) return false
       if (!term) return true
@@ -171,35 +201,69 @@ export default function HomeLeadPage() {
         (a.categoryName || '').toLowerCase().includes(term)
       )
     })
-  }, [articles, used, pickerQ, pickerSlot, slots])
+  }, [articles, used, pickerQ, pickerSlot, slots, items])
+
+  useEffect(() => {
+    let alive = true
+    api
+      .getAllCategories()
+      .then((rows) => {
+        if (alive) setCategories((rows || []).filter((c) => c.slug && c.slug !== 'home'))
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     let alive = true
     async function load() {
       try {
         setLoading(true)
+        setError('')
+        setMessage('')
+        const params = { limit: '80' }
+        if (pageKey !== 'home') params.category = pageKey
         const [rows, settings] = await Promise.all([
-          api.getArticles({ limit: '80' }),
+          api.getArticles(params),
           api.getSettings(),
         ])
         if (!alive) return
         const mapped = (rows || []).map(mapArticle).filter(Boolean)
         setArticles(mapped)
+        setSettingsDoc(settings || {})
 
-        const saved = settings?.homepageSlots
-        if (saved && (saved.lead || saved.story || (saved.grid || []).some(Boolean))) {
-          setSlots(cloneSlots(saved))
+        if (pageKey === 'home') {
+          const saved = settings?.homepageSlots
+          if (saved && (saved.lead || saved.story || (saved.grid || []).some(Boolean))) {
+            setSlots(cloneSlots(saved))
+          } else {
+            const next = cloneSlots(EMPTY)
+            next.lead = mapped[0]?.id || ''
+            next.grid = mapped.slice(1, 7).map((a) => a.id)
+            while (next.grid.length < 6) next.grid.push('')
+            next.mid = mapped.slice(7, 13).map((a) => a.id)
+            while (next.mid.length < 6) next.mid.push('')
+            next.story = mapped[13]?.id || mapped[1]?.id || ''
+            next.storyList = mapped.slice(14, 20).map((a) => a.id)
+            while (next.storyList.length < 6) next.storyList.push('')
+            setSlots(next)
+          }
         } else {
-          const next = cloneSlots(EMPTY)
-          next.lead = mapped[0]?.id || ''
-          next.grid = mapped.slice(1, 7).map((a) => a.id)
-          while (next.grid.length < 6) next.grid.push('')
-          next.mid = mapped.slice(7, 13).map((a) => a.id)
-          while (next.mid.length < 6) next.mid.push('')
-          next.story = mapped[13]?.id || mapped[1]?.id || ''
-          next.storyList = mapped.slice(14, 20).map((a) => a.id)
-          while (next.storyList.length < 6) next.storyList.push('')
-          setSlots(next)
+          const count = sectionSlotMeta(sectionVariant({ slug: pageKey })).count
+          const savedIds = settings?.sectionSlots?.[pageKey]?.items || settings?.sectionSlots?.[pageKey] || []
+          const next = emptyItems(count)
+          if (Array.isArray(savedIds) && savedIds.some(Boolean)) {
+            savedIds.slice(0, count).forEach((id, i) => {
+              next[i] = id || ''
+            })
+          } else {
+            mapped.slice(0, count).forEach((a, i) => {
+              next[i] = a.id
+            })
+          }
+          setItems(next)
         }
       } catch (err) {
         if (alive) setError(err.message)
@@ -211,7 +275,7 @@ export default function HomeLeadPage() {
     return () => {
       alive = false
     }
-  }, [])
+  }, [pageKey])
 
   function art(id) {
     return id ? byId.get(id) || null : null
@@ -222,6 +286,28 @@ export default function HomeLeadPage() {
     if (!fromKey || !toKey || fromKey === toKey) return
     const from = parseKey(fromKey)
     const to = parseKey(toKey)
+    if (pageKey !== 'home') {
+      setItems((prev) => {
+        const next = [...prev]
+        const incoming = from.type === 'pool' ? from.id : next[from.index] || ''
+        if (!incoming && from.type === 'pool') return prev
+        if (from.type === 'pool') {
+          return next.map((id, i) => {
+            if (i === to.index) return incoming
+            return id === incoming ? '' : id
+          })
+        }
+        if (from.type === 'items' && to.type === 'items') {
+          const a = next[from.index] || ''
+          const b = next[to.index] || ''
+          next[to.index] = a
+          next[from.index] = b
+          return next
+        }
+        return prev
+      })
+      return
+    }
     setSlots((prev) => {
       if (from.type === 'pool') {
         const incoming = from.id
@@ -242,6 +328,10 @@ export default function HomeLeadPage() {
 
   function clearSlot(slotKey) {
     const ref = parseKey(slotKey)
+    if (ref.type === 'items') {
+      setItems((prev) => prev.map((id, i) => (i === ref.index ? '' : id)))
+      return
+    }
     setSlots((prev) => setAt(prev, ref, ''))
   }
 
@@ -261,14 +351,36 @@ export default function HomeLeadPage() {
     setSaving(true)
     setError('')
     try {
-      await api.updateSettings({ homepageSlots: cloneSlots(slots) })
-      setMessage('সেভ হয়েছে — হোমপেজে এই পজিশনেই খবর দেখাবে')
+      if (pageKey === 'home') {
+        const ids = [slots.lead, slots.story, ...slots.grid, ...slots.mid, ...slots.storyList].filter(Boolean)
+        const dup = ids.filter((id, i) => ids.indexOf(id) !== i)
+        if (dup.length) throw new Error('একই খবর একাধিক পজিশনে রাখা যাবে না')
+        await api.updateSettings({ homepageSlots: cloneSlots(slots) })
+        setMessage('সেভ হয়েছে — হোমপেজে এই পজিশনেই খবর দেখাবে')
+      } else {
+        const ids = items.filter(Boolean)
+        const dup = ids.filter((id, i) => ids.indexOf(id) !== i)
+        if (dup.length) throw new Error('একই খবর একাধিক পজিশনে রাখা যাবে না')
+        const invalid = ids.filter((id) => !byId.has(id))
+        if (invalid.length) throw new Error('কিছু খবর আর পাওয়া যাচ্ছে না — আবার বেছে নিন')
+        const nextMap = { ...(settingsDoc?.sectionSlots || {}) }
+        nextMap[pageKey] = { items: [...items] }
+        const updated = await api.updateSettings({ sectionSlots: nextMap })
+        setSettingsDoc(updated)
+        setMessage(`সেভ হয়েছে — ${selectedCat?.name || pageKey} সেকশনে এই পজিশনেই খবর দেখাবে`)
+      }
       setTimeout(() => setMessage(''), 3500)
     } catch (err) {
       setError(err.message)
     } finally {
       setSaving(false)
     }
+  }
+
+  function handleReset() {
+    if (!confirm('এই পৃষ্ঠার পজিশন রিসেট হবে। খবর ডিলিট হবে না।')) return
+    if (pageKey === 'home') setSlots(cloneSlots(EMPTY))
+    else setItems(emptyItems(meta?.count || 7))
   }
 
   if (loading) {
@@ -290,11 +402,9 @@ export default function HomeLeadPage() {
           <button
             type="button"
             className="admin-btn admin-btn-danger"
-            onClick={() => {
-              if (confirm(t.deleteAll + '?')) setSlots(cloneSlots(EMPTY))
-            }}
+            onClick={handleReset}
           >
-            {t.deleteAll}
+            {t.resetPositions || 'সব রিসেট'}
           </button>
           <button type="button" className="admin-btn admin-btn-primary" onClick={handleSave} disabled={saving}>
             {saving ? t.saving : t.save}
@@ -305,6 +415,23 @@ export default function HomeLeadPage() {
       {message ? <div className="admin-alert admin-alert-success">{message}</div> : null}
       {error ? <div className="admin-alert admin-alert-error">{error}</div> : null}
 
+      <div className="hl-page-select">
+        <label htmlFor="hl-page-key">পৃষ্ঠা নির্বাচন করুন</label>
+        <select
+          id="hl-page-key"
+          value={pageKey}
+          onChange={(e) => setPageKey(e.target.value)}
+        >
+          <option value="home">হোমপেজ</option>
+          {categories.map((c) => (
+            <option key={c._id || c.slug} value={c.slug}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {pageKey === 'home' ? (
       <div className={`hl-canvas${dragging ? ' is-dragging' : ''}`}>
         <div className="hl-col hl-col-main">
           <SlotCard
@@ -377,6 +504,28 @@ export default function HomeLeadPage() {
           ))}
         </div>
       </div>
+      ) : (
+      <div className={`hl-canvas hl-canvas-section${dragging ? ' is-dragging' : ''}`}>
+        {(meta?.columns || []).map((col) => (
+          <div key={col.title} className="hl-col">
+            <div className="hl-story-head">{col.title}</div>
+            {col.keys.map((index) => (
+              <SlotCard
+                key={`items-${index}`}
+                article={art(items[index])}
+                label={`${col.title} ${col.keys.length > 1 ? col.keys.indexOf(index) + 1 : ''}`.trim()}
+                slotKey={`items:${index}`}
+                variant={col.variant}
+                onClear={clearSlot}
+                onChoose={openPicker}
+                onDragStart={setDragging}
+                onDrop={handleDrop}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      )}
 
       <div className="hl-pool">
         <div className="hl-pool-head">

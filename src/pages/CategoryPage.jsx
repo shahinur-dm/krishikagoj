@@ -5,6 +5,7 @@ import SafeImage from '../components/SafeImage'
 import SeoHead from '../components/SeoHead'
 import { useSiteData } from '../context/SiteDataContext'
 import { useLang } from '../context/LanguageContext'
+import { orderArticlesByIds } from '../lib/sectionLayouts'
 
 const LIMIT = 12
 
@@ -90,7 +91,11 @@ export default function CategoryPage() {
         setCategory(cat)
         setSubs(catSubs || [])
         const fetchedItems = (articles || []).map(mapArticle)
-        setItems(fetchedItems)
+        const ordered = orderArticlesByIds(
+          fetchedItems,
+          site.settings?.sectionSlots?.[slug]?.items || site.settings?.sectionSlots?.[slug],
+        )
+        setItems(ordered)
         setHasMore(fetchedItems.length === LIMIT)
         setPage(1)
       } catch (err) {
@@ -103,7 +108,7 @@ export default function CategoryPage() {
     return () => {
       alive = false
     }
-  }, [slug, subSlug])
+  }, [slug, subSlug, site.settings])
 
   const popular = useMemo(() => {
     const source = site.popular?.length
@@ -129,7 +134,7 @@ export default function CategoryPage() {
     }
   }
 
-  if (loading) return <div className="container eb-loading">লোড হচ্ছে...</div>
+  if (loading) return <div className="container eb-loading">{t.loading}</div>
 
   if (error || !category) {
     return (
@@ -203,7 +208,7 @@ export default function CategoryPage() {
             <ul className="eb-sub-tabs">
               <li>
                 <Link to={`/category/${slug}`} className={!subSlug ? 'active' : ''}>
-                  সব
+                  {t.all}
                 </Link>
               </li>
               {subs.map((s) => (
@@ -212,7 +217,7 @@ export default function CategoryPage() {
                     to={`/category/${slug}?sub=${s.slug}`}
                     className={subSlug === s.slug ? 'active' : ''}
                   >
-                    {s.nameBn}
+                    {text(s.nameBn, s.nameEn)}
                   </Link>
                 </li>
               ))}
@@ -265,7 +270,7 @@ export default function CategoryPage() {
             <div className="eb-load-more">
               {hasMore ? (
                 <button type="button" onClick={loadMore} disabled={loadingMore}>
-                    {loadingMore ? 'লোড হচ্ছে...' : 'আরও দেখুন'}
+                    {loadingMore ? t.loading : t.more}
                   </button>
               ) : (
                 <p className="eb-no-more">আর কোনো খবর নেই</p>
@@ -280,8 +285,8 @@ export default function CategoryPage() {
             <div className="eb-side-list">
               {popular.map((item) => (
                 <div className="eb-side-item" key={item.id}>
-                  <Link to={item.path || `/news/${item.slug || item.id}`}>{item.title}</Link>
-                  {item.excerpt && <p>{item.excerpt}</p>}
+                  <Link to={item.path || `/news/${item.slug || item.id}`}>{text(item.title, item.titleEn)}</Link>
+                  {item.excerpt && <p>{text(item.excerpt, item.excerptEn)}</p>}
                 </div>
               ))}
       </div>

@@ -4,7 +4,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api/|assets/|logo\\.png|logo\\.svg|favicon\\.svg|robots\\.txt|placeholder-news\\.svg|icons\\.svg).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {

@@ -69,14 +69,37 @@ export default function AdsPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [adsEnabled, setAdsEnabled] = useState(true)
+  const [globalSaving, setGlobalSaving] = useState(false)
 
   async function load() {
     setItems(await api.getAdminAds())
   }
 
+  async function loadGlobal() {
+    const data = await api.getAdsGlobal()
+    setAdsEnabled(data.adsEnabled !== false && data.ads_enabled !== false)
+  }
+
   useEffect(() => {
     load().catch((err) => setError(err.message))
+    loadGlobal().catch((err) => setError(err.message))
   }, [])
+
+  async function toggleGlobalAds() {
+    const next = !adsEnabled
+    setGlobalSaving(true)
+    setError('')
+    try {
+      const data = await api.updateAdsGlobal(next)
+      setAdsEnabled(data.adsEnabled !== false && data.ads_enabled !== false)
+      flash(next ? 'ওয়েবসাইটে বিজ্ঞাপন চালু করা হয়েছে' : 'ওয়েবসাইটে বিজ্ঞাপন বন্ধ করা হয়েছে')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setGlobalSaving(false)
+    }
+  }
 
   function flash(msg) {
     setMessage(msg)
@@ -169,6 +192,31 @@ export default function AdsPage() {
     <div>
       {message ? <div className="admin-alert admin-alert-success">{message}</div> : null}
       {error ? <div className="admin-alert admin-alert-error">{error}</div> : null}
+
+      <div className={`admin-card ads-global-card${adsEnabled ? ' is-on' : ' is-off'}`}>
+        <div className="admin-card-header">
+          <h3>বিজ্ঞাপন নিয়ন্ত্রণ</h3>
+          <span className={`ads-global-status${adsEnabled ? ' is-on' : ' is-off'}`}>
+            Status: {adsEnabled ? 'ON' : 'OFF'}
+          </span>
+        </div>
+        <div className="admin-card-body ads-global-body">
+          <label className="ads-global-toggle">
+            <input
+              type="checkbox"
+              checked={adsEnabled}
+              disabled={globalSaving}
+              onChange={toggleGlobalAds}
+            />
+            <span className="ads-global-switch" aria-hidden="true" />
+            <span className="ads-global-copy">
+              {adsEnabled
+                ? 'বিজ্ঞাপন চালু আছে — ওয়েবসাইটে বিজ্ঞাপন দেখানো হবে।'
+                : 'বিজ্ঞাপন বন্ধ আছে — ওয়েবসাইটে কোনো বিজ্ঞাপন দেখানো হবে না।'}
+            </span>
+          </label>
+        </div>
+      </div>
 
       <div className="admin-card">
         <div className="admin-card-header">

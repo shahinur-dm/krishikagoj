@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 import { api } from '../../api/client'
 import SafeImage from '../SafeImage'
+import MediaPickerDialog from './MediaPickerDialog'
 
 /**
- * Upload-first image field. Optional URL fallback kept collapsed.
+ * Upload-first image field. News form can also pick from the media library.
  */
 export default function ImageUploadField({
   label = 'ছবি',
@@ -11,11 +12,13 @@ export default function ImageUploadField({
   onChange,
   required = false,
   hint = 'JPG, PNG, WEBP — সর্বোচ্চ ৪MB',
+  libraryPicker = false,
 }) {
   const inputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [showUrl, setShowUrl] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   async function onFile(e) {
     const file = e.target.files?.[0]
@@ -64,13 +67,23 @@ export default function ImageUploadField({
         >
           {uploading ? 'আপলোড হচ্ছে...' : 'ছবি আপলোড করুন'}
         </button>
-        <button
-          type="button"
-          className="admin-btn admin-btn-sm admin-btn-secondary"
-          onClick={() => setShowUrl((v) => !v)}
-        >
-          {showUrl ? 'URL লুকান' : 'URL ব্যবহার'}
-        </button>
+        {libraryPicker ? (
+          <button
+            type="button"
+            className="admin-btn admin-btn-sm admin-btn-secondary"
+            onClick={() => setPickerOpen(true)}
+          >
+            ছবি নির্বাচন করুন
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="admin-btn admin-btn-sm admin-btn-secondary"
+            onClick={() => setShowUrl((v) => !v)}
+          >
+            {showUrl ? 'URL লুকান' : 'URL ব্যবহার'}
+          </button>
+        )}
       </div>
 
       <input
@@ -81,7 +94,7 @@ export default function ImageUploadField({
         onChange={onFile}
       />
 
-      {showUrl ? (
+      {!libraryPicker && showUrl ? (
         <input
           className="mt-2"
           type="url"
@@ -105,6 +118,15 @@ export default function ImageUploadField({
 
       <p className="image-upload-hint">{hint}</p>
       {error ? <p className="image-upload-error">{error}</p> : null}
+
+      {libraryPicker ? (
+        <MediaPickerDialog
+          open={pickerOpen}
+          currentUrl={value}
+          onClose={() => setPickerOpen(false)}
+          onSelect={onChange}
+        />
+      ) : null}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { SiteDataProvider, useSiteData } from './context/SiteDataContext'
+import { useSiteData } from './context/SiteDataContext'
 import { useLang } from './context/LanguageContext'
 import { SiteHeader } from './components/Header'
 import Ticker from './components/Ticker'
@@ -56,9 +56,5 @@ function Shell() {
 }
 
 export default function Layout() {
-  return (
-    <SiteDataProvider>
-      <Shell />
-    </SiteDataProvider>
-  )
+  return <Shell />
 }

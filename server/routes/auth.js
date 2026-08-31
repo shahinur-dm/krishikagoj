@@ -6,10 +6,15 @@ const router = Router()
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body
-    if (!email || !password) return res.status(400).json({ message: 'Email and password required' })
+    const { email, password, username } = req.body
+    const ident = String(email || username || '')
+      .toLowerCase()
+      .trim()
+    if (!ident || !password) return res.status(400).json({ message: 'Email and password required' })
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() })
+    const user = await User.findOne({
+      $or: [{ email: ident }, { username: ident }],
+    })
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid email or password' })
     }
@@ -103,15 +108,29 @@ router.post('/writers', requireAuth, requireSuperAdmin, async (req, res) => {
 
 router.put('/writers/:id', requireAuth, requireSuperAdmin, async (req, res) => {
   try {
+    const existing = await User.findById(req.params.id)
+    if (!existing) return res.status(404).json({ message: 'User not found' })
+    if (existing.role === 'superadmin' && String(req.user._id) !== String(existing._id)) {
+      if (req.body.role && req.body.role !== 'superadmin') {
+        const others = await User.countDocuments({ role: 'superadmin', _id: { $ne: existing._id } })
+        if (!others) return res.status(400).json({ message: 'Cannot downgrade the last Super Admin' })
+      }
+      if (req.body.isActive === false) {
+        const others = await User.countDocuments({
+          role: 'superadmin',
+          isActive: true,
+          _id: { $ne: existing._id },
+        })
+        if (!others) return res.status(400).json({ message: 'Cannot deactivate the last Super Admin' })
+      }
+    }
     const update = { ...req.body }
     delete update.password
     if (req.body.password) {
-      const user = await User.findById(req.params.id)
-      if (!user) return res.status(404).json({ message: 'User not found' })
-      user.password = req.body.password
-      Object.assign(user, update)
-      await user.save()
-      return res.json(user.toSafeJSON())
+      existing.password = req.body.password
+      Object.assign(existing, update)
+      await existing.save()
+      return res.json(existing.toSafeJSON())
     }
     const user = await User.findByIdAndUpdate(req.params.id, update, { new: true }).select('-password')
     if (!user) return res.status(404).json({ message: 'User not found' })
@@ -126,8 +145,13 @@ router.delete('/writers/:id', requireAuth, requireSuperAdmin, async (req, res) =
     if (String(req.user._id) === String(req.params.id)) {
       return res.status(400).json({ message: 'Cannot delete your own account' })
     }
-    const user = await User.findByIdAndDelete(req.params.id)
+    const user = await User.findById(req.params.id)
     if (!user) return res.status(404).json({ message: 'User not found' })
+    if (user.role === 'superadmin') {
+      const others = await User.countDocuments({ role: 'superadmin', _id: { $ne: user._id } })
+      if (!others) return res.status(400).json({ message: 'Cannot delete the last Super Admin' })
+    }
+    await user.deleteOne()
     res.json({ message: 'Writer deleted' })
   } catch (err) {
     res.status(500).json({ message: err.message })

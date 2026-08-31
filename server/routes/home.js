@@ -4,18 +4,21 @@ import Category from '../models/Category.js'
 import PhotoGallery from '../models/PhotoGallery.js'
 import VideoGallery from '../models/VideoGallery.js'
 import SiteSetting from '../models/SiteSetting.js'
+import Subcategory from '../models/Subcategory.js'
 import ImportantWebsite from '../models/ImportantWebsite.js'
 import Staff from '../models/Staff.js'
 import Ad from '../models/Ad.js'
 import { ensureDemoAds, slimAd, isLive } from './ads.js'
 import { cacheGet, cacheSet } from '../utils/cache.js'
+import { isAdsGloballyEnabled } from '../utils/adsEnabled.js'
+import BreakingNews from '../models/BreakingNews.js'
 
 const router = Router()
-const CACHE_KEY = 'home:v32'
+const CACHE_KEY = 'home:v41'
 const CACHE_TTL = 180_000
 
 const SLIM =
-  'title titleEn slug excerpt excerptEn image author views featured headline latest popular bigthumbnail publishedAt category'
+  'title titleEn slug excerpt excerptEn image author views featured headline latest popular bigthumbnail publishedAt category subcategory'
 
 function thumb(url, w = 480) {
   if (!url || typeof url !== 'string') return url || ''
@@ -59,7 +62,86 @@ function slimArticle(a, imageW = 480) {
     category: a.category
       ? { _id: a.category._id, name: a.category.name, nameEn: a.category.nameEn || '', slug: a.category.slug }
       : null,
+    subcategory: a.subcategory
+      ? {
+          _id: a.subcategory._id || a.subcategory,
+          slug: a.subcategory.slug || '',
+          nameBn: a.subcategory.nameBn || '',
+        }
+      : null,
   }
+}
+
+function isOid(id) {
+  return /^[0-9a-fA-F]{24}$/.test(String(id || '').trim())
+}
+
+async function buildTopicGrid(settings) {
+  const limit = Math.min(16, Math.max(1, Number(settings?.topicGridLimit) || 8))
+  const topics = await Subcategory.find({ isActive: { $ne: false }, showOnHome: true })
+    .populate('category', 'name nameEn slug')
+    .sort({ homeOrder: 1, order: 1, nameBn: 1 })
+    .limit(limit)
+    .lean()
+  if (!topics.length) return []
+
+  const pickedIds = []
+  topics.forEach((topic) => {
+    if (isOid(topic.homeFeatured)) pickedIds.push(String(topic.homeFeatured).trim())
+    ;(topic.homeSecondary || []).forEach((id) => {
+      if (isOid(id)) pickedIds.push(String(id).trim())
+    })
+  })
+
+  const extra = await Article.find({
+    isPublished: true,
+    $or: [{ subcategory: { $in: topics.map((topic) => topic._id) } }, { _id: { $in: pickedIds } }],
+  })
+    .select(SLIM)
+    .populate('category', 'name nameEn slug')
+    .populate('subcategory', 'nameBn slug')
+    .sort({ publishedAt: -1 })
+    .lean()
+
+  const byId = new Map(extra.map((article) => [String(article._id), slimArticle(article, 400)]))
+  const bySub = {}
+  extra.forEach((article) => {
+    const sid = String(article.subcategory?._id || article.subcategory || '')
+    if (!sid) return
+    if (!bySub[sid]) bySub[sid] = []
+    bySub[sid].push(slimArticle(article, 400))
+  })
+
+  return topics
+    .map((topic) => {
+      const used = new Set()
+      const items = []
+      const push = (id) => {
+        const art = byId.get(String(id || '').trim())
+        if (!art) return
+        const key = String(art._id)
+        if (used.has(key)) return
+        used.add(key)
+        items.push(art)
+      }
+      push(topic.homeFeatured)
+      ;(topic.homeSecondary || []).forEach(push)
+      ;(bySub[String(topic._id)] || []).forEach((art) => {
+        if (items.length >= 8) return
+        push(art._id)
+      })
+      if (!items.length) return null
+      return {
+        _id: topic._id,
+        nameBn: topic.nameBn,
+        nameEn: topic.nameEn || '',
+        slug: topic.slug,
+        parentSlug: topic.category?.slug || settings?.topicGridSlug || 'motso',
+        hasSub: true,
+        items,
+      }
+    })
+    .filter(Boolean)
 }
 
 function slimSettings(s) {
@@ -67,6 +149,8 @@ function slimSettings(s) {
   return {
     siteName: s.siteName,
     homepageLayout: s.homepageLayout,
+    homepageSlots: s.homepageSlots || null,
+    sectionSlots: s.sectionSlots || {},
     tagline: s.tagline,
     hotline: s.hotline,
     notice: s.notice,
@@ -104,12 +188,17 @@ function slimSettings(s) {
         }
       : null,
     favicon: s.favicon || s.logo || '/logo.png',
+    adsEnabled: isAdsGloballyEnabled(s),
+    ads_enabled: isAdsGloballyEnabled(s),
+    topicGridLimit: Number(s.topicGridLimit) > 0 ? Number(s.topicGridLimit) : 8,
+    topicGridSlug: s.topicGridSlug || 'motso',
   }
 }
 
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const cached = cacheGet(CACHE_KEY)
+    const bust = Boolean(req.query.bust)
+    const cached = bust ? null : cacheGet(CACHE_KEY)
     if (cached) {
       res.set('Cache-Control', 'public, max-age=10, s-maxage=30, stale-while-revalidate=60')
       res.set('X-Cache', 'HIT')
@@ -132,13 +221,15 @@ router.get('/', async (_req, res) => {
       settings,
       websites,
       staff,
+      breakingNews,
     ] = await Promise.all([
       Category.find({ isActive: true }).select('name nameEn slug order').sort({ order: 1, name: 1 }).lean(),
       Article.find({ isPublished: true })
         .select(SLIM)
         .populate('category', 'name nameEn slug')
+        .populate('subcategory', 'nameBn slug')
         .sort({ publishedAt: -1 })
-        .limit(120)
+        .limit(160)
         .lean(),
       Article.find({ isPublished: true, popular: true })
         .select(SLIM)
@@ -152,15 +243,15 @@ router.get('/', async (_req, res) => {
         .sort({ views: -1 })
         .limit(20)
         .lean(),
-      PhotoGallery.find().select('title photo type').sort({ createdAt: -1 }).limit(4).lean(),
+      PhotoGallery.find().select('title photo type').sort({ createdAt: -1 }).limit(12).lean(),
       VideoGallery.find()
         .select('title embedCode thumbnail type')
         .sort({ createdAt: -1 })
-        .limit(5)
+        .limit(10)
         .lean(),
       SiteSetting.findOne({ key: 'site' })
         .select(
-          'siteName tagline hotline notice logo favicon email phoneBn addressBn aboutUs facebookPage liveTvLink liveTvEmbed chiefAdvisor publisher managingEditor social namaz seo themeColor homepageLayout homepageSlots',
+          'siteName tagline hotline notice logo favicon email phoneBn addressBn aboutUs facebookPage liveTvLink liveTvEmbed chiefAdvisor publisher managingEditor social namaz seo themeColor homepageLayout homepageSlots sectionSlots adsEnabled topicGridLimit topicGridSlug',
         )
         .lean(),
       ImportantWebsite.find({ isActive: { $ne: false } })
@@ -172,6 +263,11 @@ router.get('/', async (_req, res) => {
         .select('name designation image link type order')
         .sort({ order: 1 })
         .limit(8)
+        .lean(),
+      BreakingNews.find({ isActive: { $ne: false }, status: 'published' })
+        .select('titleBn titleEn order publishedAt')
+        .sort({ order: 1, publishedAt: -1 })
+        .limit(20)
         .lean(),
     ])
 
@@ -194,12 +290,83 @@ router.get('/', async (_req, res) => {
     const latest = slimArts.filter((a) => a.latest).slice(0, 30)
     const bigThumb = slimArts.find((a) => a.bigthumbnail)
 
+    const gridSlug = settings?.topicGridSlug || 'motso'
     const byCategory = {}
     for (const cat of contentCats) byCategory[cat.slug] = []
     for (const article of slimArts) {
       const slug = article.category?.slug
-      if (!slug || !byCategory[slug] || byCategory[slug].length >= 9) continue
+      const cap = slug === gridSlug ? 32 : 9
+      if (!slug || !byCategory[slug] || byCategory[slug].length >= cap) continue
       byCategory[slug].push(article)
+    }
+
+    const sectionSlots = settings?.sectionSlots && typeof settings.sectionSlots === 'object'
+      ? settings.sectionSlots
+      : {}
+    const extraIds = []
+    for (const slug of Object.keys(byCategory)) {
+      const ids = (sectionSlots[slug]?.items || sectionSlots[slug] || [])
+        .map((id) => String(id || '').trim())
+        .filter((id) => /^[0-9a-fA-F]{24}$/.test(id))
+      ids.forEach((id) => extraIds.push(id))
+    }
+    const known = new Map(slimArts.map((a) => [String(a._id), a]))
+    const need = [...new Set(extraIds)].filter((id) => !known.has(id))
+    if (need.length) {
+      const extra = await Article.find({ _id: { $in: need }, isPublished: true })
+        .select(SLIM)
+        .populate('category', 'name nameEn slug')
+        .lean()
+      extra.forEach((a) => known.set(String(a._id), slimArticle(a, 400)))
+    }
+    for (const slug of Object.keys(byCategory)) {
+      const ids = (sectionSlots[slug]?.items || sectionSlots[slug] || [])
+        .map((id) => String(id || '').trim())
+        .filter(Boolean)
+      if (!ids.length) continue
+      const used = new Set()
+      const next = []
+      ids.forEach((id) => {
+        const item = known.get(id)
+        if (item && !used.has(id)) {
+          next.push(item)
+          used.add(id)
+        }
+      })
+      ;(byCategory[slug] || []).forEach((item) => {
+        const id = String(item._id)
+        if (!used.has(id)) next.push(item)
+      })
+      byCategory[slug] = next.slice(0, slug === gridSlug ? 32 : 12)
+    }
+
+    const safolloCat = contentCats.find((c) => c.slug === 'safollo')
+    if (safolloCat && (byCategory.safollo?.length || 0) < 7) {
+      const moreSafollo = await Article.find({
+        isPublished: true,
+        category: safolloCat._id,
+      })
+        .select(SLIM)
+        .populate('category', 'name nameEn slug')
+        .sort({ publishedAt: -1 })
+        .limit(7)
+        .lean()
+      const have = new Set((byCategory.safollo || []).map((a) => String(a._id)))
+      if (!byCategory.safollo) byCategory.safollo = []
+      for (const article of moreSafollo) {
+        if (byCategory.safollo.length >= 7) break
+        const id = String(article._id)
+        if (have.has(id)) continue
+        byCategory.safollo.push(slimArticle(article, 400))
+        have.add(id)
+      }
+    }
+
+    let topicGrid = []
+    try {
+      topicGrid = await buildTopicGrid(settings)
+    } catch (err) {
+      console.warn('topicGrid failed:', err.message)
     }
 
     // Prefer bigthumbnail as lead if present
@@ -256,6 +423,7 @@ router.get('/', async (_req, res) => {
       recent: slimArts.slice(0, 40),
       leadLayout,
       byCategory,
+      topicGrid,
       photos: photos.map((p) => ({ ...p, photo: thumb(p.photo, 400) })),
       videos: videos.map((v) => ({
         _id: v._id,
@@ -266,13 +434,22 @@ router.get('/', async (_req, res) => {
       })),
       websites,
       staff,
-      ads: (ads || []).filter((a) => isLive(a)).map(slimAd),
+      ads: isAdsGloballyEnabled(settings) ? (ads || []).filter((a) => isLive(a)).map(slimAd) : [],
       settings: slimSettings(settings),
+      breakingNews: (breakingNews || []).map((b) => ({
+        _id: b._id,
+        titleBn: b.titleBn,
+        titleEn: b.titleEn || '',
+        order: b.order ?? 1,
+      })),
     }
 
-    cacheSet(CACHE_KEY, payload, CACHE_TTL)
-    res.set('Cache-Control', 'public, max-age=10, s-maxage=30, stale-while-revalidate=60')
-    res.set('X-Cache', 'MISS')
+    if (!bust) cacheSet(CACHE_KEY, payload, CACHE_TTL)
+    res.set(
+      'Cache-Control',
+      bust ? 'private, no-store' : 'public, max-age=10, s-maxage=30, stale-while-revalidate=60',
+    )
+    res.set('X-Cache', bust ? 'BYPASS' : 'MISS')
     res.json(payload)
   } catch (err) {
     res.status(500).json({ message: err.message })

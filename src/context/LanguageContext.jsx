@@ -1,7 +1,47 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
-const KEY = 'kk_lang'
+const SITE_KEY = 'kk_lang'
+const ADMIN_KEY = 'kk_admin_lang'
 const LanguageContext = createContext(null)
+
+function readStored(key) {
+  try {
+    const saved = localStorage.getItem(key)
+    if (saved === 'en' || saved === 'bn') return saved
+  } catch {
+    /* ignore */
+  }
+  try {
+    const match = document.cookie.match(new RegExp(`(?:^|; )${key}=(bn|en)(?:;|$)`))
+    if (match) return match[1]
+  } catch {
+    /* ignore */
+  }
+  return 'bn'
+}
+
+function persist(key, lang) {
+  try {
+    localStorage.setItem(key, lang)
+  } catch {
+    /* ignore */
+  }
+  try {
+    document.cookie = `${key}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax`
+  } catch {
+    /* ignore */
+  }
+}
+
+function isAdminPath(pathname = '') {
+  return (
+    pathname.startsWith('/admin') ||
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname.startsWith('/register')
+  )
+}
 
 const COPY = {
   bn: {
@@ -25,6 +65,8 @@ const COPY = {
     more: 'আরও',
     searchPage: 'খোঁজ',
     searchBtn: 'খুঁজুন',
+    searching: 'খুঁজছি...',
+    noResults: 'কোনো ফলাফল পাওয়া যায়নি।',
     noEnglish: 'ইংরেজি ভার্সন নেই — বাংলা দেখানো হচ্ছে',
     backTop: 'উপরে যান',
     adminPanel: 'অ্যাডমিন প্যানেল',
@@ -42,21 +84,49 @@ const COPY = {
     navSubcategories: 'সাবক্যাটাগরি',
     navNewPost: 'পোস্ট যোগ',
     navAllPosts: 'সব পোস্ট',
-    navHomeLead: 'হোম নিউজ পজিশন',
+    navHomeLead: 'নিউজ পজিশন',
+    navTopicGrid: 'ক্যাটাগরি নিউজ লেআউট',
+    navAiWriter: 'AI Writer',
+    navAiSettings: 'AI Settings',
+    navOpinion: 'মতামত',
+    navOpinionList: 'Opinion List',
+    navOpinionAdd: 'Add New Opinion',
+    navPolls: 'Polls',
+    navPollList: 'Poll List',
+    navPollAdd: 'Add New Poll',
+    navSurvey: 'অনলাইন জরিপ',
+    navSurveyList: 'Survey List',
+    navSurveyAdd: 'Add New Survey',
+    navPages: 'Page',
+    navPageAdd: 'Add New Page',
+    navPageList: 'Page List',
+    homeLeadDesc: 'সব পেজের খবরের জায়গা বদলান',
+    homeLeadTitle: 'নিউজ পজিশন ম্যানেজার',
+    homeLeadHelp:
+      'পেজ বেছে নিন, খবর টেনে বসান। ডিলিট শুধু পজিশন খালি করে — খবর মুছে যায় না। সেভ করলে শুধু ওই পেজেই দেখাবে।',
+    resetPositions: 'সব রিসেট',
     navPhotos: 'ফটো গ্যালারি',
     navVideos: 'ভিডিও গ্যালারি',
     navStaff: 'স্টাফ',
     navWriters: 'রাইটার',
     navPassword: 'পাসওয়ার্ড',
     navWebsite: 'ওয়েবসাইট সেটিং',
+    navLoginLogo: 'লগইন লোগো',
     navNamaz: 'নামাজের সময়',
     navNotice: 'নোটিশ',
     navSocial: 'সোশ্যাল মিডিয়া',
     navSeo: 'এসইও',
     navAds: 'বিজ্ঞাপন / অ্যাডস',
     navWebsites: 'গুরুত্বপূর্ণ ওয়েবসাইট',
+    navBreaking: 'ব্রেকিং নিউজ',
+    navUsersSec: 'ইউজার ম্যানেজমেন্ট',
+    navUsers: 'ইউজার',
+    navAddUser: 'নতুন ইউজার',
+    navRoles: 'রোল',
+    navPermissions: 'পারমিশন',
     loginAdmin: 'কৃষিকাগজ অ্যাডমিন',
     email: 'ইমেইল',
+    emailOrUser: 'ইমেইল বা ইউজারনেম',
     password: 'পাসওয়ার্ড',
     loggingIn: 'লগইন হচ্ছে...',
     reporterReg: 'রিপোর্টার রেজিস্ট্রেশন',
@@ -82,19 +152,18 @@ const COPY = {
     newPost: 'নতুন পোস্ট',
     newPostDesc: 'খবর লিখুন ও প্রকাশ করুন',
     allPostsDesc: 'তালিকা দেখুন ও সম্পাদনা',
-    homeLeadDesc: 'ড্র্যাগ করে খবরের জায়গা বদলান',
     catDesc: 'বিভাগ ম্যানেজ করুন',
     photoDesc: 'ছবি আপলোড/সম্পাদনা',
     videoDesc: 'ভিডিও গ্যালারি',
     siteDesc: 'নাম, লোগো, যোগাযোগ',
     writerDesc: 'অ্যাকাউন্ট অনুমোদন',
     siteLiveDesc: 'লাইভ পোর্টাল খুলুন',
-    homeLeadTitle: 'হোম নিউজ পজিশন',
-    homeLeadHelp: 'খবর টেনে বসান, অথবা বেছে নিন বাটনে ক্লিক করে খবর সিলেক্ট করুন। সেভ করলে সাইটে সেই জায়গায়ই দেখাবে।',
     save: 'সেভ করুন',
     saving: 'সেভ হচ্ছে...',
     deleteAll: 'সব ডিলিট',
     delete: 'ডিলিট',
+    breakingNews: 'ব্রেকিং নিউজ',
+    confirmDelete: 'মুছে ফেলবেন?',
   },
   en: {
     todayPaper: "Today's paper",
@@ -117,6 +186,8 @@ const COPY = {
     more: 'More',
     searchPage: 'Search',
     searchBtn: 'Search',
+    searching: 'Searching...',
+    noResults: 'No results found.',
     noEnglish: 'English version not available — showing Bangla',
     backTop: 'Back to top',
     adminPanel: 'Admin panel',
@@ -134,21 +205,44 @@ const COPY = {
     navSubcategories: 'Subcategories',
     navNewPost: 'Add post',
     navAllPosts: 'All posts',
-    navHomeLead: 'Home news positions',
+    navHomeLead: 'News positions',
+    navTopicGrid: 'Category news layout',
+    navAiWriter: 'AI Writer',
+    navAiSettings: 'AI Settings',
+    navOpinion: 'Opinion',
+    navOpinionList: 'Opinion List',
+    navOpinionAdd: 'Add New Opinion',
+    navPolls: 'Polls',
+    navPollList: 'Poll List',
+    navPollAdd: 'Add New Poll',
+    navSurvey: 'Online survey',
+    navSurveyList: 'Survey List',
+    navSurveyAdd: 'Add New Survey',
+    navPages: 'Page',
+    navPageAdd: 'Add New Page',
+    navPageList: 'Page List',
     navPhotos: 'Photo gallery',
     navVideos: 'Video gallery',
     navStaff: 'Staff',
     navWriters: 'Writers',
     navPassword: 'Password',
     navWebsite: 'Website settings',
+    navLoginLogo: 'Login logo',
     navNamaz: 'Prayer times',
     navNotice: 'Notice',
     navSocial: 'Social media',
     navSeo: 'SEO',
     navAds: 'Ads / promotions',
     navWebsites: 'Important websites',
+    navBreaking: 'Breaking News',
+    navUsersSec: 'User management',
+    navUsers: 'Users',
+    navAddUser: 'Add new user',
+    navRoles: 'Roles',
+    navPermissions: 'Permissions',
     loginAdmin: 'Krishikagos Admin',
     email: 'Email',
+    emailOrUser: 'Email or username',
     password: 'Password',
     loggingIn: 'Signing in...',
     reporterReg: 'Reporter registration',
@@ -174,53 +268,66 @@ const COPY = {
     newPost: 'New post',
     newPostDesc: 'Write and publish news',
     allPostsDesc: 'List and edit posts',
-    homeLeadDesc: 'Drag news into homepage slots',
+    homeLeadDesc: 'Arrange news on every page',
     catDesc: 'Manage sections',
     photoDesc: 'Upload / edit photos',
     videoDesc: 'Video gallery',
     siteDesc: 'Name, logo, contact',
     writerDesc: 'Approve accounts',
     siteLiveDesc: 'Open live portal',
-    homeLeadTitle: 'Home news positions',
-    homeLeadHelp: 'Drag news into slots, or click Choose to pick from the list. After save they appear in those places on the site.',
+    homeLeadTitle: 'News position manager',
+    homeLeadHelp:
+      'Pick a page, then drag news into slots. Delete only unassigns a slot — it does not remove the article. Save applies only to that page.',
+    resetPositions: 'Reset all',
     save: 'Save',
     saving: 'Saving...',
     deleteAll: 'Delete all',
     delete: 'Delete',
+    breakingNews: 'Breaking News',
+    confirmDelete: 'Delete this item?',
   },
 }
 
 export function LanguageProvider({ children }) {
-  const [lang, setLangState] = useState(() => {
-    try {
-      const saved = localStorage.getItem(KEY)
-      if (saved === 'en' || saved === 'bn') return saved
-    } catch {
-      /* ignore */
-    }
-    return 'bn'
-  })
+  const { pathname } = useLocation()
+  const adminView = isAdminPath(pathname)
+  const [siteLang, setSiteLang] = useState(() => readStored(SITE_KEY))
+  const [adminLang, setAdminLang] = useState(() => readStored(ADMIN_KEY))
+
+  const lang = adminView ? adminLang : siteLang
+
+  useEffect(() => {
+    persist(SITE_KEY, siteLang)
+  }, [siteLang])
+
+  useEffect(() => {
+    persist(ADMIN_KEY, adminLang)
+  }, [adminLang])
 
   useEffect(() => {
     document.documentElement.lang = lang === 'en' ? 'en' : 'bn'
-    try {
-      localStorage.setItem(KEY, lang)
-    } catch {
-      /* ignore */
-    }
-  }, [lang])
+    document.documentElement.dataset.localeScope = adminView ? 'admin' : 'site'
+  }, [lang, adminView])
 
   const value = useMemo(() => {
     const isEn = lang === 'en'
     return {
       lang,
       isEn,
-      t: COPY[lang],
-      setLang: setLangState,
-      toggleLang: () => setLangState((v) => (v === 'en' ? 'bn' : 'en')),
+      scope: adminView ? 'admin' : 'site',
+      siteLang,
+      adminLang,
+      t: COPY[lang] || COPY.bn,
+      setLang: adminView ? setAdminLang : setSiteLang,
+      setSiteLang,
+      setAdminLang,
+      toggleLang: () => {
+        const setter = adminView ? setAdminLang : setSiteLang
+        setter((v) => (v === 'en' ? 'bn' : 'en'))
+      },
       text: (bn, en) => (isEn && en ? en : bn),
     }
-  }, [lang])
+  }, [lang, adminView, siteLang, adminLang])
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
 }

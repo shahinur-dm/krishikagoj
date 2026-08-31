@@ -7,9 +7,9 @@ import SeoHead from '../components/SeoHead'
 import AdSlider from '../components/AdSlider'
 import { useSiteData } from '../context/SiteDataContext'
 import { useLang } from '../context/LanguageContext'
+import { cleanArticleHtml } from '../utils/cleanArticleHtml'
 
 const CANDIDATE_BATCH = 10
-const RELATED_LIMIT = 6
 const MIN_FONT = 15
 const MAX_FONT = 26
 const DEFAULT_FONT = 18
@@ -18,27 +18,44 @@ const MEDIA_BASE = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL.replace(/\/api$/, '')
   : ''
 
-function cleanArticleHtml(html = '') {
-  return String(html)
-    .replace(/\u00AD/g, '')
-    .replace(/\u200B/g, '')
-    .replace(/&shy;/gi, '')
-    .replace(/white-space\s*:\s*nowrap/gi, 'white-space:normal')
-    .replace(/\smin-width\s*:\s*\d+px/gi, '')
-    .replace(/<(img|video|iframe|embed|object)([^>]*?)>/gi, (match, tag, attrs) => {
-      const cleaned = attrs
-        .replace(/\swidth\s*=\s*["']?\d+["']?/gi, '')
-        .replace(/\sheight\s*=\s*["']?\d+["']?/gi, '')
-      return `<${tag}${cleaned}>`
-    })
+function mediaUrl(img) {
+  if (!img) return ''
+  const src = String(img)
+  if (/^https?:\/\//i.test(src) || src.startsWith('data:') || src.startsWith('/')) return src
+  return `${MEDIA_BASE}${src.startsWith('/') ? src : `/${src}`}`
 }
 
-function PostMeta({ article, publisher }) {
+function formatBnTime(value) {
+  if (!value) return ''
+  try {
+    return new Intl.DateTimeFormat('bn-BD', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(value))
+  } catch {
+    return ''
+  }
+}
+
+function PostMeta({ article, authorName }) {
+  const time = formatBnTime(article.publishedAt)
+  const published = [article.date, time].filter(Boolean).join(' ')
+
   return (
-    <div className="kk-article-byline">
-      {publisher ? <p className="kk-byline-line">প্রকাশক: {publisher}</p> : null}
-      {article.date ? <p className="kk-byline-line">প্রকাশের তারিখ: {article.date}</p> : null}
-      <p className="kk-byline-line">অনলাইন সংস্করণ</p>
+    <div className="kk-post-meta-inline">
+      {authorName ? (
+        <div className="kk-journalist">
+          <i className="fa-solid fa-circle-user" aria-hidden="true" />
+          <span>{authorName}</span>
+        </div>
+      ) : null}
+      {published ? (
+        <div className="kk-publish">
+          <i className="fa-regular fa-clock" aria-hidden="true" />
+          <span>প্রকাশ: {published}</span>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -134,66 +151,60 @@ function ShareRow({ url, title, onFontChange }) {
   )
 }
 
-function RelatedNews({ article }) {
-  const [items, setItems] = useState([])
-
-  useEffect(() => {
-    let alive = true
-    async function load() {
-      try {
-        const rows = await api.getArticles({
-          category: article.category || undefined,
-          limit: RELATED_LIMIT,
-          exclude: article.id,
-        })
-        if (alive) setItems((rows || []).map(mapArticle))
-      } catch {
-        /* sidebar list is optional */
-      }
-    }
-    load()
-    return () => {
-      alive = false
-    }
-  }, [article.category, article.id])
-
-  if (!items.length) return null
+function ArticleLeftRail({ currentId }) {
+  const { latest } = useSiteData()
+  const items = (latest || []).filter((item) => item.id !== currentId).slice(0, 8)
 
   return (
-    <div className="common-border-box">
-      <div className="section-title-flex">
-        <h3>
-          {article.categoryName ? `${article.categoryName} সম্পর্কিত আরও খবর` : 'আরও খবর'}
-        </h3>
-      </div>
-      <div className="kk-related-list">
+    <aside className="kk-post-left">
+      <div className="common-border-box">
+        <div className="section-title-flex">
+          <h3>সর্বশেষ</h3>
+        </div>
         {items.map((item) => (
-          <div className="news-list" key={item.id}>
-            <Link to={item.path} className="kk-related-item">
-              <div className="img-zoom-hover">
-                <SafeImage src={item.image} alt={item.title} width={240} />
+          <div className="news-list kk-left-item" key={item.id}>
+            <Link to={item.path}>
+              <div className="kk-left-item-row">
+                <div className="kk-left-thumb">
+                  <div className="img-zoom-hover">
+                    <SafeImage src={item.image} alt={item.title} width={160} />
+                  </div>
+                </div>
+                <div className="kk-left-text">
+                  <h4 className="title">{item.title}</h4>
+                  {item.date ? <span>{item.date}</span> : null}
+                </div>
               </div>
-              <h4 className="title">{item.title}</h4>
             </Link>
           </div>
         ))}
       </div>
-    </div>
+    </aside>
   )
 }
 
-function ArticleBlock({ article, isFirst, onFontChange, ads }) {
+function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT, ads }) {
   const { t, text, isEn } = useLang()
   const { settings } = useSiteData()
   const url = typeof window !== 'undefined' ? `${window.location.origin}${article.path}` : ''
   const gallery = article.raw?.images || []
   const title = text(article.title, article.titleEn)
-  const publisher = settings?.publisher || article.author || settings?.siteName || ''
+  const authorName = String(article.author || article.raw?.authorUser?.name || '').trim()
+  const hasUploadedImage = Boolean(String(article.image || '').trim())
+  const showImageInDetails = article.showImageInDetails !== false
+  const defaultNewsImage = String(settings?.defaultNewsImage || '/placeholder-news.svg').trim()
+  let detailsImage = ''
+  if (hasUploadedImage && showImageInDetails) {
+    detailsImage = article.image
+  } else if (!hasUploadedImage) {
+    detailsImage = defaultNewsImage
+  }
 
   return (
     <section className={`kk-news-body${isFirst ? '' : ' kk-news-next'}`}>
       <div className="container">
         <div className="kk-post-grid">
+          <ArticleLeftRail currentId={article.id} />
           <div className="kk-post-mid">
             <article className="kk-post-content">
               <ul className="news-details-breadcrumb">
@@ -215,15 +226,15 @@ function ArticleBlock({ article, isFirst, onFontChange, ads }) {
               </ul>
               <h1 className="post-title">{title}</h1>
 
-              <PostMeta article={article} publisher={publisher} />
+              <PostMeta article={article} authorName={authorName} />
 
               <ShareRow url={url} title={title} onFontChange={onFontChange} />
 
-              {article.image && (
+              {detailsImage ? (
                 <figure className="news-heading-pic">
-                  <SafeImage src={article.image} alt={title} width={900} priority={isFirst} />
+                  <SafeImage src={detailsImage} alt={title} width={900} priority={isFirst} />
                 </figure>
-              )}
+              ) : null}
 
               {article.excerpt && (
                 <div className="post-subtitle">
@@ -235,6 +246,7 @@ function ArticleBlock({ article, isFirst, onFontChange, ads }) {
 
               <div
                 className="entry-content"
+                style={{ fontSize: `${fontSize}px`, lineHeight: 1.7 }}
                 dangerouslySetInnerHTML={{ __html: cleanArticleHtml(text(article.body, article.bodyEn)) }}
               />
 
@@ -258,7 +270,6 @@ function ArticleBlock({ article, isFirst, onFontChange, ads }) {
                 {article.tags && <span className="kk-post-tags">{article.tags}</span>}
               </div>
             </article>
-            <RelatedNews article={article} />
           </div>
 
           <aside className="kk-post-right">
@@ -407,7 +418,10 @@ export default function ArticlePage() {
   }
 
   const siteName = settings?.siteName || 'কৃষিকাগজ'
-  const desc = (article.excerpt || '').replace(/\s+/g, ' ').trim().slice(0, 160)
+  const desc = (article.metaDescription || article.excerpt || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160)
   const keywords = [article.categoryName, article.tags, settings?.seo?.metaKeyword]
     .filter(Boolean)
     .join(', ')
@@ -446,10 +460,22 @@ export default function ArticlePage() {
         }}
       />
 
-      <ArticleBlock article={article} isFirst onFontChange={changeFont} ads={ads} />
+      <ArticleBlock
+        article={article}
+        isFirst
+        onFontChange={changeFont}
+        fontSize={fontSize}
+        ads={ads}
+      />
 
       {nextArticles.map((next) => (
-        <ArticleBlock key={next.id} article={next} onFontChange={changeFont} ads={ads} />
+        <ArticleBlock
+          key={next.id}
+          article={next}
+          onFontChange={changeFont}
+          fontSize={fontSize}
+          ads={ads}
+        />
       ))}
 
       <div ref={sentinelRef} className="kk-feed-sentinel" aria-hidden="true" />

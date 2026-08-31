@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 const ROUTE_RULES = [
   { match: /^\/admin\/home$/, any: true },
   { match: /^\/admin\/home-lead/, perm: ['setting', 'post'] },
+  { match: /^\/admin\/topic-grid/, perm: ['category', 'setting', 'post'] },
   { match: /^\/admin\/password/, any: true },
   { match: /^\/admin\/categories/, perm: 'category' },
   { match: /^\/admin\/subcategories/, perm: 'category' },
@@ -12,8 +13,13 @@ const ROUTE_RULES = [
   { match: /^\/admin\/videos/, perm: 'gallery' },
   { match: /^\/admin\/staff/, perm: ['setting', 'role'] },
   { match: /^\/admin\/writers/, role: 'superadmin' },
+  { match: /^\/admin\/breaking/, perm: ['breaking', 'post', 'setting'] },
+  { match: /^\/admin\/users/, perm: ['users', 'role'] },
+  { match: /^\/admin\/roles/, perm: ['users', 'role'] },
+  { match: /^\/admin\/permissions/, perm: ['users', 'role'] },
   { match: /^\/admin\/seo/, perm: ['setting', 'ads'] },
   { match: /^\/admin\/ads/, perm: ['setting', 'ads'] },
+  { match: /^\/admin\/login-logo/, role: 'superadmin' },
   { match: /^\/admin\/(website|livetv|namaz|notice|social|important-websites)/, perm: 'setting' },
 ]
 

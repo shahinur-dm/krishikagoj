@@ -3,7 +3,26 @@ import { api, mapArticle } from '../api/client'
 
 const SiteDataContext = createContext(null)
 export { SiteDataContext }
-const CACHE_KEY = 'kk_home_cache_v32'
+const CACHE_KEY = 'kk_home_cache_v41'
+
+function clearHomeCache() {
+  try {
+    localStorage.removeItem(CACHE_KEY)
+  } catch {
+    /* ignore */
+  }
+  try {
+    sessionStorage.removeItem(CACHE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+let siteRefreshFn = null
+
+export function refreshSiteData() {
+  return siteRefreshFn ? siteRefreshFn() : Promise.resolve()
+}
 const FRESH_MS = 120_000
 const STALE_MS = 30 * 60_000
 
@@ -62,12 +81,20 @@ function normalize(data) {
     videos: data.videos || [],
     websites: data.websites || [],
     staff: data.staff || [],
-    ads: data.ads || [],
+    ads:
+      data.settings?.adsEnabled === false || data.settings?.ads_enabled === false
+        ? []
+        : data.ads || [],
     settings: data.settings || null,
     categoryBlocks: categories.map((cat) => ({
       cat,
       articles: (data.byCategory?.[cat.slug] || []).map(mapArticle),
     })),
+    topicGrid: (data.topicGrid || []).map((col) => ({
+      ...col,
+      items: (col.items || []).map(mapArticle).filter(Boolean),
+    })),
+    breakingNews: data.breakingNews || [],
   }
 }
 
@@ -88,6 +115,8 @@ const empty = {
   ads: [],
   settings: null,
   categoryBlocks: [],
+  topicGrid: [],
+  breakingNews: [],
 }
 
 export function SiteDataProvider({ children }) {
@@ -136,9 +165,20 @@ export function SiteDataProvider({ children }) {
 
     loadHome()
     const t = setTimeout(loadSubs, 50)
+
+    siteRefreshFn = async () => {
+      clearHomeCache()
+      const home = await api.getHome({ bust: Date.now() })
+      writeCache(home)
+      setData(normalize(home))
+      const subcategories = await api.getSubcategories().catch(() => [])
+      setSubs(subcategories || [])
+    }
+
     return () => {
       alive = false
       clearTimeout(t)
+      if (siteRefreshFn) siteRefreshFn = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -150,6 +190,7 @@ export function SiteDataProvider({ children }) {
       loading,
       error,
       ready: Boolean(data),
+      refresh: refreshSiteData,
     }),
     [data, subs, loading, error],
   )

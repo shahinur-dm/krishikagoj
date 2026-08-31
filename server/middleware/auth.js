@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
+import { hasAction } from '../lib/permissions.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'krishikajosh-secret-change-me'
 
@@ -53,4 +54,17 @@ export function isSuperAdmin(user) {
 
 export function canSeeAllPosts(user) {
   return isSuperAdmin(user) || user?.permissions?.allpost === true
+}
+
+/** Granular action check with fallback to existing module flags */
+export function requireAction(module, action, ...fallbackKeys) {
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ message: 'Login required' })
+    if (req.user.role === 'superadmin') return next()
+    if (hasAction(req.user, module, action)) return next()
+    const perms = req.user.permissions || {}
+    const keys = fallbackKeys.length ? fallbackKeys : []
+    if (keys.some((k) => perms[k] === true)) return next()
+    return res.status(403).json({ message: 'Permission denied' })
+  }
 }

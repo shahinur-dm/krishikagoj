@@ -1,7 +1,9 @@
 import { Router } from 'express'
 import Ad, { AD_POSITIONS, AD_MEDIA_TYPES } from '../models/Ad.js'
+import SiteSetting from '../models/SiteSetting.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { cacheDel } from '../utils/cache.js'
+import { isAdsGloballyEnabled } from '../utils/adsEnabled.js'
 
 const router = Router()
 
@@ -176,6 +178,10 @@ function sanitizeBody(body = {}) {
 
 router.get('/public', async (_req, res) => {
   try {
+    const settings = await SiteSetting.findOne({ key: 'site' }).select('adsEnabled').lean()
+    if (!isAdsGloballyEnabled(settings)) {
+      return res.json([])
+    }
     await ensureDemoAds()
     const items = await Ad.find({ isActive: { $ne: false } })
       .sort({ position: 1, order: 1, createdAt: -1 })
@@ -184,6 +190,43 @@ router.get('/public', async (_req, res) => {
     res.json(items.filter((a) => isLive(a, now)).map(slimAd))
   } catch (err) {
     res.status(500).json({ message: err.message })
+  }
+})
+
+router.get('/global', requireAuth, requirePermission('setting', 'ads'), async (_req, res) => {
+  try {
+    let settings = await SiteSetting.findOne({ key: 'site' }).select('adsEnabled').lean()
+    if (!settings) {
+      const created = await SiteSetting.create({ key: 'site' })
+      settings = created.toObject()
+    }
+    const adsEnabled = isAdsGloballyEnabled(settings)
+    res.json({ adsEnabled, ads_enabled: adsEnabled })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
+
+router.put('/global', requireAuth, requirePermission('setting', 'ads'), async (req, res) => {
+  try {
+    const raw = req.body?.adsEnabled ?? req.body?.ads_enabled
+    if (raw === undefined) {
+      return res.status(400).json({ message: 'ads_enabled প্রয়োজন' })
+    }
+    const adsEnabled = raw === true || raw === 'true' || raw === 1 || raw === '1'
+    const settings = await SiteSetting.findOneAndUpdate(
+      { key: 'site' },
+      { $set: { adsEnabled } },
+      { new: true, upsert: true },
+    )
+      .select('adsEnabled')
+      .lean()
+    cacheDel('settings')
+    cacheDel('home:')
+    const value = isAdsGloballyEnabled(settings)
+    res.json({ adsEnabled: value, ads_enabled: value })
+  } catch (err) {
+    res.status(400).json({ message: err.message })
   }
 })
 

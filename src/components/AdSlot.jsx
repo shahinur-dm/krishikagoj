@@ -1,4 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useContext, useEffect, useRef } from 'react'
+import { SiteDataContext } from '../context/SiteDataContext'
+import { visitorAdsEnabled } from './AdCard'
 
 /**
  * Renders admin-pasted ad HTML, or a visible placeholder when empty.
@@ -11,6 +13,7 @@ export default function AdSlot({
   className = '',
   showPlaceholder = true,
 }) {
+  const site = useContext(SiteDataContext)
   const ref = useRef(null)
   const code = (html || '').trim()
 
@@ -19,6 +22,7 @@ export default function AdSlot({
     ref.current.innerHTML = code
   }, [code])
 
+  if (site && !visitorAdsEnabled(site.settings)) return null
   if (!code && !showPlaceholder) return null
 
   return (

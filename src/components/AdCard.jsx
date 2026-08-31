@@ -161,12 +161,19 @@ export default function AdCard({ ad, variant = 'banner' }) {
   )
 }
 
-export function pickAd(ads = [], position) {
-  const list = adsForSlider(ads, position)
+export function visitorAdsEnabled(settings) {
+  if (!settings) return true
+  if (settings.adsEnabled === false || settings.ads_enabled === false) return false
+  return true
+}
+
+export function pickAd(ads = [], position, settings) {
+  const list = adsForSlider(ads, position, settings)
   return list[0] || null
 }
 
-export function adsForSlider(ads = [], position) {
+export function adsForSlider(ads = [], position, settings) {
+  if (!visitorAdsEnabled(settings)) return []
   const source = (ads || []).filter(Boolean)
   const pool = source.length ? source : FALLBACK_ADS
   const keyed = []

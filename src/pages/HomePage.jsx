@@ -1,11 +1,28 @@
 import { useEffect, useState } from 'react'
 import { useSiteData } from '../context/SiteDataContext'
 import LeadSection from '../components/LeadSection'
-import CategorySection, { HOME_LAYOUT_CYCLE, usesBinodonLayout } from '../components/CategorySection'
+import CategorySection, {
+  HOME_LAYOUT_CYCLE,
+  usesBinodonLayout,
+  usesGobeshonaLayout,
+  usesMotamotLayout,
+  usesProjuktiLayout,
+  usesProshasonLayout,
+  usesUddoktaHeroLayout,
+  usesKrishokerKothaLayout,
+  usesShikkhaLayout,
+} from '../components/CategorySection'
 import VideoGallerySection, { PhotoGallerySection } from '../components/VideoGallerySection'
 import SeoHead from '../components/SeoHead'
 import MidPageAds from '../components/MidPageAds'
 import { useLang } from '../context/LanguageContext'
+
+/** Category shown in the College-style stack beside বদলি. Change slug to swap the block. */
+const BODOLI_SIDE_CATEGORY_SLUG = 'projukti'
+
+function isBodoliCategory(cat) {
+  return cat?.slug === 'bodoli' || String(cat?.name || '').includes('বদলি')
+}
 
 export default function HomePage() {
   const {
@@ -66,6 +83,22 @@ export default function HomePage() {
     settings?.tagline ||
     'বাংলাদেশের কৃষি খবর, ফসল, প্রাণিসম্পদ ও কৃষকের কথা।'
   const ogImage = seo.ogImage || settings?.logo || '/logo.png'
+  const motamotBlock = categoryBlocks.find(
+    (block) => usesMotamotLayout(block.cat) && block.articles?.length,
+  )
+  const gobeshonaHasNews = categoryBlocks.some(
+    (block) => usesGobeshonaLayout(block.cat) && block.articles?.length,
+  )
+  const fisheriesBlock = categoryBlocks.find(
+    (block) =>
+      block.articles?.length &&
+      (block.cat.slug === 'motso' || String(block.cat.name || '').includes('মৎস্য')),
+  )
+  const bodoliSideBlock = categoryBlocks.find(
+    (block) =>
+      block.articles?.length &&
+      (block.cat.slug === BODOLI_SIDE_CATEGORY_SLUG || usesProjuktiLayout(block.cat)),
+  )
 
   return (
     <>
@@ -110,14 +143,28 @@ export default function HomePage() {
       {showRest &&
         categoryBlocks.map(({ cat, articles }, index) => {
           if (!articles.length) return null
+          if (cat.slug === 'motso' || String(cat.name || '').includes('মৎস্য')) {
+            return null
+          }
+          if (usesMotamotLayout(cat) && gobeshonaHasNews) {
+            return null
+          }
           const variant =
-            cat.slug === 'motso'
-              ? 'fisheries'
+            usesMotamotLayout(cat)
+              ? 'motamot'
+              : cat.slug === 'bishesh'
+              ? 'specialReport'
               : cat.slug === 'prani'
               ? 'livestock'
-              : cat.slug === 'gobeshona'
-              ? 'adminRows'
-              : usesBinodonLayout(cat)
+              : usesGobeshonaLayout(cat)
+              ? 'spotlight'
+              : usesProshasonLayout(cat)
+                ? 'proshason'
+                : usesProjuktiLayout(cat)
+                ? 'projukti'
+                : usesUddoktaHeroLayout(cat) || usesKrishokerKothaLayout(cat)
+                ? 'heroGridSidebar'
+                : usesBinodonLayout(cat)
                 ? 'binodon'
                 : HOME_LAYOUT_CYCLE[index % HOME_LAYOUT_CYCLE.length]
           return (
@@ -130,9 +177,39 @@ export default function HomePage() {
               sidebarLatest={latest}
               sidebarPopular={popular}
               adOffset={index + 2}
+              companion={
+                usesGobeshonaLayout(cat) && motamotBlock
+                  ? {
+                      title: motamotBlock.cat.name,
+                      slug: motamotBlock.cat.slug,
+                      articles: motamotBlock.articles,
+                    }
+                  : null
+              }
+              sideCategory={
+                (isBodoliCategory(cat) ||
+                  usesKrishokerKothaLayout(cat) ||
+                  usesShikkhaLayout(cat)) &&
+                bodoliSideBlock
+                  ? {
+                      title: bodoliSideBlock.cat.name,
+                      slug: bodoliSideBlock.cat.slug,
+                      articles: bodoliSideBlock.articles,
+                    }
+                  : null
+              }
             />
           )
         })}
+
+      {showRest && fisheriesBlock ? (
+        <CategorySection
+          title={fisheriesBlock.cat.name}
+          slug={fisheriesBlock.cat.slug}
+          articles={fisheriesBlock.articles}
+          variant="fisheries"
+        />
+      ) : null}
 
       {showRest && <PhotoGallerySection photos={photos} />}
     </>

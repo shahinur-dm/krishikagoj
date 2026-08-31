@@ -15,6 +15,13 @@ import adsRouter from './routes/ads.js'
 import homeRouter from './routes/home.js'
 import uploadRouter from './routes/upload.js'
 import seoRouter from './routes/seo.js'
+import breakingRouter from './routes/breaking.js'
+import usersRouter from './routes/users.js'
+import opinionsRouter from './routes/opinions.js'
+import pollsRouter from './routes/polls.js'
+import surveysRouter from './routes/surveys.js'
+import pagesRouter from './routes/pages.js'
+import aiSettingsRouter from './routes/aiSettings.js'
 
 const app = express()
 
@@ -43,6 +50,13 @@ app.use('/api/videos', videosRouter)
 app.use('/api/staff', staffRouter)
 app.use('/api/websites', websitesRouter)
 app.use('/api/ads', adsRouter)
+app.use('/api/breaking', breakingRouter)
+app.use('/api/users', usersRouter)
+app.use('/api/opinions', opinionsRouter)
+app.use('/api/polls', pollsRouter)
+app.use('/api/surveys', surveysRouter)
+app.use('/api/pages', pagesRouter)
+app.use('/api/ai-settings', aiSettingsRouter)
 
 app.use((err, _req, res, _next) => {
   console.error(err)
@@ -53,8 +67,15 @@ const globalCache = globalThis.__kkMongo || { conn: null, promise: null }
 globalThis.__kkMongo = globalCache
 
 export async function connectDb() {
-  if (globalCache.conn && mongoose.connection.readyState === 1) {
-    return globalCache.conn
+  const state = mongoose.connection.readyState
+  if (state === 1) {
+    globalCache.conn = mongoose
+    return mongoose
+  }
+
+  if (state === 0 || state === 3) {
+    globalCache.conn = null
+    globalCache.promise = null
   }
 
   if (!globalCache.promise) {
@@ -65,7 +86,7 @@ export async function connectDb() {
       .connect(uri, {
         maxPoolSize: 5,
         minPoolSize: 0,
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 8000,
         socketTimeoutMS: 20000,
         bufferCommands: false,
         autoIndex: false,
@@ -77,6 +98,7 @@ export async function connectDb() {
       })
       .catch((err) => {
         globalCache.promise = null
+        globalCache.conn = null
         throw err
       })
   }

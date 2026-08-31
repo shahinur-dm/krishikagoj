@@ -1,20 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useLang } from '../../context/LanguageContext'
-import { LogoMark } from '../../components/BrandLogo'
+import { useSiteData } from '../../context/SiteDataContext'
+import { LogoMark, LOGO_SRC } from '../../components/BrandLogo'
 import LangSwitch from '../../components/LangSwitch'
+import { api } from '../../api/client'
 import '../../styles/admin.css'
 
 export default function LoginPage() {
   const { login, isAuthenticated, loading } = useAuth()
   const { t, isEn } = useLang()
+  const { settings } = useSiteData()
   const navigate = useNavigate()
   const location = useLocation()
   const [email, setEmail] = useState('superadmin@example.com')
   const [password, setPassword] = useState('password')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [loginLogo, setLoginLogo] = useState('')
+
+  useEffect(() => {
+    api
+      .getSettings()
+      .then((s) => setLoginLogo(s?.loginLogo || ''))
+      .catch(() => {})
+  }, [])
 
   if (!loading && isAuthenticated) {
     return <Navigate to="/admin/home" replace />
@@ -29,11 +40,13 @@ export default function LoginPage() {
       const from = location.state?.from?.pathname || '/admin/home'
       navigate(from, { replace: true })
     } catch (err) {
-      setError(err.message || 'লগইন ব্যর্থ হয়েছে')
+      setError(err.message || (isEn ? 'Login failed' : 'লগইন ব্যর্থ হয়েছে'))
     } finally {
       setSubmitting(false)
     }
   }
+
+  const logoSrc = loginLogo || settings?.logo || LOGO_SRC
 
   return (
     <div className="login-page">
@@ -42,7 +55,9 @@ export default function LoginPage() {
           <LangSwitch />
         </div>
         <div className="login-box-header">
-          <LogoMark className="login-logo" />
+          <div className="login-logo-wrap">
+            <LogoMark className="login-logo" src={logoSrc} />
+          </div>
           <h1>{t.loginAdmin}</h1>
           <p>{isEn ? 'Krishikagos editorial desk' : 'কৃষিকাগজ সম্পাদকীয় ডেস্ক'}</p>
         </div>
@@ -50,14 +65,14 @@ export default function LoginPage() {
           {error && <div className="login-error">{error}</div>}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label htmlFor="email">{t.email}</label>
+              <label htmlFor="email">{t.emailOrUser || t.email}</label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
             <div className="form-group">

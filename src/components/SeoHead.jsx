@@ -43,7 +43,8 @@ function absoluteUrl(pathOrUrl, origin = window.location.origin) {
 }
 
 /**
- * On-page SEO snippets: title, description, canonical, Open Graph, Twitter, JSON-LD.
+ * Page title/description/JSON-LD only. Open Graph and Twitter tags live in
+ * index.html so crawlers can read them without JavaScript.
  */
 export default function SeoHead({
   title,
@@ -58,11 +59,9 @@ export default function SeoHead({
   siteName = 'কৃষিকাগজ',
 }) {
   useEffect(() => {
-    const origin = window.location.origin
     const fullTitle = title || siteName
     const desc = (description || '').replace(/\s+/g, ' ').trim().slice(0, 160)
     const url = canonical || window.location.href.split('?')[0]
-    const img = absoluteUrl(image || '/logo.png', origin)
 
     document.title = fullTitle
     upsertMeta('name', 'description', desc)
@@ -71,20 +70,6 @@ export default function SeoHead({
     upsertMeta('name', 'robots', noIndex ? 'noindex,nofollow' : 'index,follow')
 
     upsertLink('canonical', url)
-
-    upsertMeta('property', 'og:locale', 'bn_BD')
-    upsertMeta('property', 'og:type', type)
-    upsertMeta('property', 'og:site_name', siteName)
-    upsertMeta('property', 'og:title', fullTitle)
-    upsertMeta('property', 'og:description', desc)
-    upsertMeta('property', 'og:url', url)
-    upsertMeta('property', 'og:image', img)
-
-    upsertMeta('name', 'twitter:card', 'summary_large_image')
-    upsertMeta('name', 'twitter:title', fullTitle)
-    upsertMeta('name', 'twitter:description', desc)
-    upsertMeta('name', 'twitter:image', img)
-
     upsertJsonLd('kk-jsonld', jsonLd || null)
   }, [title, description, keywords, author, image, type, canonical, noIndex, jsonLd, siteName])
 

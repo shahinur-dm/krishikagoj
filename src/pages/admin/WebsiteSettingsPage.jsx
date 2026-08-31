@@ -22,6 +22,7 @@ export default function WebsiteSettingsPage() {
         logo: settings.logo,
         mobileLogo: settings.mobileLogo,
         favicon: settings.favicon,
+        defaultNewsImage: settings.defaultNewsImage,
         email: settings.email,
         phoneBn: settings.phoneBn,
         phoneEn: settings.phoneEn,
@@ -98,6 +99,13 @@ export default function WebsiteSettingsPage() {
           label="ফেভিকন"
           value={settings.favicon || ''}
           onChange={(url) => updateField('favicon', url)}
+        />
+        <ImageUploadField
+          label="Default News Image"
+          value={settings.defaultNewsImage || '/placeholder-news.svg'}
+          onChange={(url) => updateField('defaultNewsImage', url)}
+          libraryPicker
+          hint="খবরের ছবি না থাকলে আর্টিকেল ডিটেইলসে এই ছবি দেখাবে"
         />
       </div>
 

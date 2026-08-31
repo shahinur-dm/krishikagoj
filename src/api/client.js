@@ -18,16 +18,28 @@ async function request(path, options = {}) {
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-    credentials: 'same-origin',
-  })
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) {
-    throw new Error(data.message || `Request failed (${res.status})`)
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 15000)
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+      credentials: 'same-origin',
+      signal: ctrl.signal,
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(data.message || `Request failed (${res.status})`)
+    }
+    return data
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      throw new Error('সার্ভার সাড়া দিচ্ছে না। একটু পরে আবার চেষ্টা করুন।')
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
   }
-  return data
 }
 
 export const api = {
@@ -44,7 +56,14 @@ export const api = {
 
   getDashboard: () => request('/dashboard'),
 
-  getHome: () => request('/home'),
+  getHome: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => [k, String(v)]),
+    ).toString()
+    return request(`/home${qs ? `?${qs}` : ''}`)
+  },
 
   getCategories: () => request('/categories'),
   getAllCategories: () => request('/categories/all'),
@@ -59,6 +78,8 @@ export const api = {
     return request(`/subcategories${qs ? `?${qs}` : ''}`)
   },
   getAllSubcategories: () => request('/subcategories/all'),
+  updateTopicGridConfig: (body) =>
+    request('/subcategories/grid-config', { method: 'PUT', body: JSON.stringify(body) }),
   createSubcategory: (body) =>
     request('/subcategories', { method: 'POST', body: JSON.stringify(body) }),
   updateSubcategory: (id, body) =>
@@ -80,9 +101,13 @@ export const api = {
   updateArticle: (id, body) =>
     request(`/articles/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteArticle: (id) => request(`/articles/${id}`, { method: 'DELETE' }),
+  postToFacebook: (id) =>
+    request(`/articles/admin/${id}/facebook-post`, { method: 'POST' }),
 
   getSettings: () => request('/settings'),
   updateSettings: (body) => request('/settings', { method: 'PUT', body: JSON.stringify(body) }),
+  updateLoginLogo: (loginLogo) =>
+    request('/settings/login-logo', { method: 'PUT', body: JSON.stringify({ loginLogo }) }),
 
   getPhotos: () => request('/photos'),
   createPhoto: (body) => request('/photos', { method: 'POST', body: JSON.stringify(body) }),
@@ -111,10 +136,71 @@ export const api = {
   deleteWebsite: (id) => request(`/websites/${id}`, { method: 'DELETE' }),
 
   getAds: () => request('/ads/public'),
+  getAdsGlobal: () => request('/ads/global'),
+  updateAdsGlobal: (adsEnabled) =>
+    request('/ads/global', { method: 'PUT', body: JSON.stringify({ ads_enabled: adsEnabled }) }),
   getAdminAds: () => request('/ads/admin/all'),
   createAd: (body) => request('/ads', { method: 'POST', body: JSON.stringify(body) }),
   updateAd: (id, body) => request(`/ads/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteAd: (id) => request(`/ads/${id}`, { method: 'DELETE' }),
+
+  getBreakingPublic: () => request('/breaking/public'),
+  getBreaking: () => request('/breaking'),
+  createBreaking: (body) => request('/breaking', { method: 'POST', body: JSON.stringify(body) }),
+  updateBreaking: (id, body) => request(`/breaking/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteBreaking: (id) => request(`/breaking/${id}`, { method: 'DELETE' }),
+
+  getAiSettings: () => request('/settings/ai-writer'),
+  saveAiSettings: (body) => request('/settings/ai-writer', { method: 'PUT', body: JSON.stringify(body) }),
+
+  getOpinions: () => request('/opinions'),
+  getOpinion: (id) => request(`/opinions/${id}`),
+  createOpinion: (body) => request('/opinions', { method: 'POST', body: JSON.stringify(body) }),
+  updateOpinion: (id, body) => request(`/opinions/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteOpinion: (id) => request(`/opinions/${id}`, { method: 'DELETE' }),
+
+  getPolls: () => request('/polls'),
+  getPoll: (id) => request(`/polls/${id}`),
+  getPublicPoll: () => request('/polls/public'),
+  createPoll: (body) => request('/polls', { method: 'POST', body: JSON.stringify(body) }),
+  updatePoll: (id, body) => request(`/polls/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deletePoll: (id) => request(`/polls/${id}`, { method: 'DELETE' }),
+  votePoll: (id, optionIndex) =>
+    request(`/polls/${id}/vote`, { method: 'POST', body: JSON.stringify({ optionIndex }) }),
+
+  getSurveys: () => request('/surveys'),
+  getSurvey: (id) => request(`/surveys/${id}`),
+  getPublicSurveys: () => request('/surveys/public'),
+  getPublicSurvey: (id) => request(`/surveys/public/${id}`),
+  getSurveyResults: (id) => request(`/surveys/${id}/results`),
+  createSurvey: (body) => request('/surveys', { method: 'POST', body: JSON.stringify(body) }),
+  updateSurvey: (id, body) => request(`/surveys/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteSurvey: (id) => request(`/surveys/${id}`, { method: 'DELETE' }),
+  respondSurvey: (id, answers) =>
+    request(`/surveys/${id}/respond`, { method: 'POST', body: JSON.stringify({ answers }) }),
+
+  getCmsPages: () => request('/pages'),
+  getCmsPage: (id) => request(`/pages/${id}`),
+  getPublicPage: (slug) => request(`/pages/public/${slug}`),
+  createCmsPage: (body) => request('/pages', { method: 'POST', body: JSON.stringify(body) }),
+  updateCmsPage: (id, body) => request(`/pages/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteCmsPage: (id) => request(`/pages/${id}`, { method: 'DELETE' }),
+
+
+  getUsers: () => request('/users'),
+  getUsersMeta: () => request('/users/meta'),
+  createUser: (body) => request('/users', { method: 'POST', body: JSON.stringify(body) }),
+  updateUser: (id, body) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteUser: (id) => request(`/users/${id}`, { method: 'DELETE' }),
+
+  listMedia: (params = {}) => {
+    const query = new URLSearchParams()
+    if (params.page) query.set('page', String(params.page))
+    if (params.limit) query.set('limit', String(params.limit))
+    if (params.q) query.set('q', params.q)
+    const qs = query.toString()
+    return request(`/upload${qs ? `?${qs}` : ''}`)
+  },
 
   uploadImage: async (file) => {
     const form = new FormData()
@@ -165,15 +251,20 @@ export function mapArticle(a) {
     path: `/news/${slug}`,
     excerpt: a.excerpt,
     excerptEn: a.excerptEn || '',
+    metaDescription: a.metaDescription || a.meta_description || '',
     body: a.body,
     bodyEn: a.bodyEn || '',
     image: a.image,
+    showImageInDetails: a.showImageInDetails !== false,
     author: a.author,
     tags: a.tags || '',
     category: a.category?.slug || a.category,
     categoryName: a.category?.name || '',
     categoryNameEn: a.category?.nameEn || '',
     categoryId: a.category?._id || a.category,
+    subcategory: a.subcategory?.slug || a.subcategory || '',
+    subcategoryId: a.subcategory?._id || a.subcategoryId || '',
+    subcategoryName: a.subcategory?.nameBn || a.subcategoryName || '',
     views: a.views || 0,
     featured: a.featured,
     headline: a.headline,

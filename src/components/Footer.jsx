@@ -30,7 +30,11 @@ export default function Footer() {
                 <BrandLogo className="footer-logo" />
               </div>
               <p style={{ lineHeight: '1.6', fontSize: '0.95rem' }}>
-                {settings?.aboutUs || 'কৃষিকাগজ — বাংলাদেশের নির্ভরযোগ্য কৃষি সংবাদ। ফসল, প্রাণিসম্পদ, মৎস্য, কৃষি প্রযুক্তি ও কৃষকের কথা সবার আগে মানুষের কাছে পৌঁছে দিতে আমরা অঙ্গীকারবদ্ধ।'}
+                {text(
+                  settings?.aboutUs ||
+                    'কৃষিকাগজ — বাংলাদেশের নির্ভরযোগ্য কৃষি সংবাদ। ফসল, প্রাণিসম্পদ, মৎস্য, কৃষি প্রযুক্তি ও কৃষকের কথা সবার আগে মানুষের কাছে পৌঁছে দিতে আমরা অঙ্গীকারবদ্ধ।',
+                  settings?.aboutUsEn,
+                )}
               </p>
               <div className="d-flex gap-3 mt-3">
                 {settings?.facebookPage && (

@@ -4,6 +4,7 @@ import Subcategory from '../models/Subcategory.js'
 import Article from '../models/Article.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { cacheGet, cacheSet, cacheDel } from '../utils/cache.js'
+import { makeSlug } from '../utils/slug.js'
 
 const router = Router()
 
@@ -47,27 +48,54 @@ router.get('/:idOrSlug', async (req, res) => {
 
 router.post('/', requireAuth, requirePermission('category'), async (req, res) => {
   try {
-    const category = await Category.create(req.body)
+    const body = req.body || {}
+    const name = String(body.name || body.nameBn || '').trim()
+    if (!name) return res.status(400).json({ message: 'ক্যাটাগরির নাম আবশ্যক' })
+    const slug = String(body.slug || '').trim().toLowerCase() || makeSlug(body.nameEn, name, 'category')
+    const category = await Category.create({
+      name,
+      nameEn: String(body.nameEn || '').trim(),
+      slug,
+      description: String(body.description || ''),
+      order: Number(body.order) || 0,
+      isActive: body.isActive !== false && body.isActive !== 'false',
+    })
     cacheDel('categories:')
     cacheDel('home:')
     res.status(201).json(category)
   } catch (err) {
-    res.status(400).json({ message: err.message })
+    res.status(400).json({ message: categoryError(err) })
   }
 })
 
+function categoryError(err) {
+  if (err?.code === 11000) return 'এই স্লাগ ইতিমধ্যে ব্যবহার করা হয়েছে। অন্য স্লাগ দিন।'
+  return err.message || 'ক্যাটাগরি সংরক্ষণ করা যায়নি'
+}
+
 router.put('/:id', requireAuth, requirePermission('category'), async (req, res) => {
   try {
-    const category = await Category.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    })
+    const body = req.body || {}
+    const name = String(body.name || body.nameBn || '').trim()
+    const slug = String(body.slug || '').trim().toLowerCase() || makeSlug(body.nameEn, name, 'category')
+    if (!name) return res.status(400).json({ message: 'ক্যাটাগরির নাম আবশ্যক' })
+
+    const category = await Category.findById(req.params.id)
     if (!category) return res.status(404).json({ message: 'Category not found' })
+
+    category.name = name
+    category.nameEn = String(body.nameEn || '').trim()
+    category.slug = slug
+    if (body.description !== undefined) category.description = String(body.description || '')
+    if (body.order !== undefined) category.order = Number(body.order) || 0
+    if (body.isActive !== undefined) category.isActive = body.isActive !== false && body.isActive !== 'false'
+    await category.save()
+
     cacheDel('categories:')
     cacheDel('home:')
     res.json(category)
   } catch (err) {
-    res.status(400).json({ message: err.message })
+    res.status(400).json({ message: categoryError(err) })
   }
 })
 

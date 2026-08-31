@@ -15,10 +15,12 @@ const WRITE_FIELDS = [
   'slug',
   'excerpt',
   'excerptEn',
+  'metaDescription',
   'body',
   'bodyEn',
   'image',
   'images',
+  'showImageInDetails',
   'tags',
   'author',
   'category',
@@ -37,9 +39,13 @@ const WRITE_FIELDS = [
 ]
 
 function pickWriteFields(body) {
+  const src = { ...body }
+  if (src.meta_description != null && src.metaDescription == null) {
+    src.metaDescription = src.meta_description
+  }
   const data = {}
   for (const key of WRITE_FIELDS) {
-    if (Object.prototype.hasOwnProperty.call(body, key)) data[key] = body[key]
+    if (Object.prototype.hasOwnProperty.call(src, key)) data[key] = src[key]
   }
   return data
 }
@@ -301,6 +307,121 @@ router.delete('/:id', requireAuth, requirePermission('post'), async (req, res) =
     res.json({ message: 'Article deleted', id: existing._id })
   } catch (err) {
     res.status(500).json({ message: err.message })
+  }
+})
+
+function stripHtml(html) {
+  if (!html) return ''
+  return String(html)
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+router.post('/admin/:id/facebook-post', requireAuth, requirePermission('post', 'allpost'), async (req, res) => {
+  try {
+    const pageId = process.env.FACEBOOK_PAGE_ID
+    const accessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN
+
+    if (!pageId || !accessToken) {
+      return res.status(400).json({
+        message: 'Facebook Page ID অথবা Page Access Token কনফিগার করা নেই (.env ফাইলে যুক্ত করুন)',
+      })
+    }
+
+    const article = await Article.findById(req.params.id)
+    if (!article) {
+      return res.status(404).json({ message: 'Article not found' })
+    }
+
+    if (!canEditArticle(req.user, article)) {
+      return res.status(403).json({ message: 'You can only publish your own posts to Facebook' })
+    }
+
+    const rawHost = req.get('x-forwarded-host') || req.get('host') || 'localhost:5050'
+    const proto = req.get('x-forwarded-proto') || req.protocol || 'http'
+    const defaultSiteUrl = `${proto}://${rawHost}`
+    const siteUrl = (process.env.SITE_URL || process.env.VITE_SITE_URL || defaultSiteUrl).replace(/\/$/, '')
+    const articleUrl = `${siteUrl}/news/${article.slug || article._id}`
+
+    const excerpt = article.excerpt || stripHtml(article.body).slice(0, 200)
+    let caption = `${article.title}`
+    if (excerpt) {
+      caption += `\n\n${excerpt}`
+    }
+    caption += `\n\nবিস্তারিত পড়ুন: ${articleUrl}`
+
+    let imageUrl = article.image || ''
+    if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+      imageUrl = `${siteUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`
+    }
+
+    let fbRes
+    let fbData
+    if (imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+      // Post photo with caption
+      const fbEndpoint = `https://graph.facebook.com/v19.0/${pageId}/photos`
+      fbRes = await fetch(fbEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: imageUrl,
+          caption: caption,
+          access_token: accessToken,
+        }),
+      })
+      fbData = await fbRes.json().catch(() => ({}))
+    } else {
+      // Post text / link to feed
+      const fbEndpoint = `https://graph.facebook.com/v19.0/${pageId}/feed`
+      fbRes = await fetch(fbEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: caption,
+          link: articleUrl,
+          access_token: accessToken,
+        }),
+      })
+      fbData = await fbRes.json().catch(() => ({}))
+    }
+
+    if (!fbRes.ok || fbData.error) {
+      const errMsg = fbData?.error?.message || 'Facebook API request failed'
+      await Article.findByIdAndUpdate(article._id, {
+        facebookPostStatus: 'failed',
+      })
+      return res.status(400).json({
+        message: `Facebook-এ পোস্ট করতে ব্যর্থ হয়েছে: ${errMsg}`,
+        error: fbData?.error,
+      })
+    }
+
+    const fbPostId = String(fbData.id || fbData.post_id || '')
+    const updated = await Article.findByIdAndUpdate(
+      article._id,
+      {
+        facebookPostId: fbPostId,
+        facebookPostStatus: 'posted',
+        facebookPostedAt: new Date(),
+      },
+      { new: true },
+    )
+
+    bustCaches()
+
+    return res.json({
+      success: true,
+      message: 'Facebook Page-এ সফলভাবে পোস্ট প্রকাশিত হয়েছে',
+      facebookPostId: updated.facebookPostId,
+      facebookPostStatus: updated.facebookPostStatus,
+      facebookPostedAt: updated.facebookPostedAt,
+    })
+  } catch (err) {
+    console.error('Facebook post error:', err)
+    return res.status(500).json({ message: err.message || 'ফেসবুক পোস্ট করার সময় অভ্যন্তরীণ সমস্যা হয়েছে' })
   }
 })
 

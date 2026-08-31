@@ -308,14 +308,12 @@ export function SiteHeader() {
 
       <div className="top-header header-mobile d-print-none">
         <div className="container">
-          <div className="row align-items-center g-1">
-            <div className="col-5 main-logo pe-1">
+          <div className="header-mobile-bar">
+            <div className="main-logo">
               <BrandLogoLink />
             </div>
-            <div className="col-3 d-flex justify-content-center align-items-center">
+            <div className="header-mobile-tools">
               <LangSwitch className="lang-switch--compact" />
-            </div>
-            <div className="col-2 d-flex justify-content-center">
               <button
                 type="button"
                 className="nav-link search-toggle-btn border-0"
@@ -324,8 +322,6 @@ export function SiteHeader() {
               >
                 <i className="fa-solid fa-magnifying-glass" />
               </button>
-            </div>
-            <div className="col-2 d-flex justify-content-end">
               <button
                 type="button"
                 className="nav-link expend-navbar border-0"

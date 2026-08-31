@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../../api/client'
+import { refreshSiteData } from '../../context/SiteDataContext'
 
 const empty = { name: '', nameEn: '', slug: '', description: '', order: 0, isActive: true }
 
@@ -9,6 +10,7 @@ export default function CategoriesPage() {
   const [editingId, setEditingId] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const formRef = useRef(null)
 
   async function load() {
     const data = await api.getAllCategories()
@@ -27,13 +29,14 @@ export default function CategoriesPage() {
   function startEdit(item) {
     setEditingId(item._id)
     setForm({
-      name: item.name,
+      name: item.name || item.nameBn || '',
       nameEn: item.nameEn || '',
       slug: item.slug,
       description: item.description || '',
       order: item.order || 0,
       isActive: item.isActive !== false,
     })
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
   function resetForm() {
@@ -45,15 +48,24 @@ export default function CategoriesPage() {
     e.preventDefault()
     setError('')
     try {
+      const payload = { ...form }
+      if (!String(payload.slug || '').trim()) {
+        payload.slug = String(payload.nameEn || '')
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      }
       if (editingId) {
-        await api.updateCategory(editingId, form)
+        await api.updateCategory(editingId, payload)
         flash('ক্যাটাগরি আপডেট হয়েছে')
       } else {
-        await api.createCategory(form)
+        await api.createCategory(payload)
         flash('ক্যাটাগরি যোগ হয়েছে')
       }
       resetForm()
       await load()
+      await refreshSiteData().catch(() => {})
     } catch (err) {
       setError(err.message)
     }
@@ -65,6 +77,7 @@ export default function CategoriesPage() {
       await api.deleteCategory(id)
       flash('মুছে ফেলা হয়েছে')
       await load()
+      await refreshSiteData().catch(() => {})
     } catch (err) {
       setError(err.message)
     }
@@ -79,7 +92,7 @@ export default function CategoriesPage() {
         <div className="admin-card-header">
           <h3>{editingId ? 'ক্যাটাগরি সম্পাদনা' : 'নতুন ক্যাটাগরি'}</h3>
         </div>
-        <div className="admin-card-body">
+        <div className="admin-card-body" ref={formRef}>
           <form onSubmit={handleSubmit}>
             <div className="admin-form-row">
               <div className="admin-form-group">
@@ -98,11 +111,11 @@ export default function CategoriesPage() {
                 />
               </div>
               <div className="admin-form-group">
-                <label>স্লাগ *</label>
+                <label>স্লাগ</label>
                 <input
                   value={form.slug}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  required
+                  placeholder="খালি রাখলে স্বয়ংক্রিয় তৈরি হবে"
                 />
               </div>
               <div className="admin-form-group">
