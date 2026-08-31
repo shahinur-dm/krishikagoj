@@ -190,27 +190,20 @@ function SpotlightFeatured({ item, text }) {
   if (!item) return null
   const title = text(item.title, item.titleEn)
   const excerpt = text(item.excerpt, item.excerptEn)
-  const showSub = Boolean(excerpt && excerpt !== title)
   return (
     <div className="news-list pg-details binodon-featured-card">
       <Link to={articlePath(item)}>
         <div className="img-zoom-hover mb-2">
           <SafeImage src={item.image} alt={title} className="img-fluid" />
         </div>
-        <h4 className="title kk-pa-head">
-          <span className="kk-pa-main">{title}</span>
-          {showSub ? (
-            <>
-              <span className="kk-pa-sep" aria-hidden="true">
-                {' '}
-                •{' '}
-              </span>
-              <span className="kk-pa-sub">{excerpt}</span>
-            </>
-          ) : null}
-        </h4>
-        {excerpt ? <p className="description">{excerpt}</p> : null}
-        {item.date ? <span>{item.date}</span> : null}
+        <h4 className="title featured-main-title">{title}</h4>
+        {excerpt ? <p className="description featured-subtitle">{excerpt}</p> : null}
+        {item.date ? (
+          <span className="featured-date">
+            <i className="fa-regular fa-clock me-1" />
+            {item.date}
+          </span>
+        ) : null}
       </Link>
     </div>
   )
@@ -579,7 +572,6 @@ function CategorySpotlight({
   if (!featured) return null
   const featuredTitle = text(featured.title, featured.titleEn)
   const featuredExcerpt = text(featured.excerpt, featured.excerptEn)
-  const featuredShowSub = Boolean(featuredExcerpt && featuredExcerpt !== featuredTitle)
   const companionAside =
     companion?.articles?.length ? (
       <CategoryMotamot
@@ -604,20 +596,16 @@ function CategorySpotlight({
                       <div className="img-zoom-hover mb-2">
                         <SafeImage src={featured.image} alt={featuredTitle} className="img-fluid" />
                       </div>
-                      <h4 className="title kk-pa-head">
-                        <span className="kk-pa-main">{featuredTitle}</span>
-                        {featuredShowSub ? (
-                          <>
-                            <span className="kk-pa-sep" aria-hidden="true">
-                              {' '}
-                              •{' '}
-                            </span>
-                            <span className="kk-pa-sub">{featuredExcerpt}</span>
-                          </>
-                        ) : null}
-                      </h4>
-                      {featuredExcerpt ? <p className="description">{featuredExcerpt}</p> : null}
-                      {featured.date ? <span>{featured.date}</span> : null}
+                      <h4 className="title featured-main-title">{featuredTitle}</h4>
+                      {featuredExcerpt ? (
+                        <p className="description featured-subtitle">{featuredExcerpt}</p>
+                      ) : null}
+                      {featured.date ? (
+                        <span className="featured-date">
+                          <i className="fa-regular fa-clock me-1" />
+                          {featured.date}
+                        </span>
+                      ) : null}
                     </Link>
                   </div>
                 </div>
@@ -688,7 +676,6 @@ function CategoryHeroGridInner({ title, slug, articles, pairedHead = false }) {
   if (!featured || !grid.length) return null
   const featuredTitle = text(featured.title, featured.titleEn)
   const featuredExcerpt = text(featured.excerpt, featured.excerptEn)
-  const featuredShowSub = Boolean(pairedHead && featuredExcerpt && featuredExcerpt !== featuredTitle)
 
   return (
     <div className="common-border-box">
@@ -700,26 +687,16 @@ function CategoryHeroGridInner({ title, slug, articles, pairedHead = false }) {
               <div className="img-zoom-hover mb-2">
                 <SafeImage src={featured.image} alt={featuredTitle} className="img-fluid" />
               </div>
-              {pairedHead ? (
-                <h4 className="title kk-pa-head">
-                  <span className="kk-pa-main">{featuredTitle}</span>
-                  {featuredShowSub ? (
-                    <>
-                      <span className="kk-pa-sep" aria-hidden="true">
-                        {' '}
-                        •{' '}
-                      </span>
-                      <span className="kk-pa-sub">{featuredExcerpt}</span>
-                    </>
-                  ) : null}
-                </h4>
-              ) : (
-                <h4 className="title">{featuredTitle}</h4>
-              )}
-              {featured.excerpt ? (
-                <p className="description">{featuredExcerpt}</p>
+              <h4 className="title featured-main-title">{featuredTitle}</h4>
+              {featuredExcerpt ? (
+                <p className="description featured-subtitle">{featuredExcerpt}</p>
               ) : null}
-              {featured.date ? <span>{featured.date}</span> : null}
+              {featured.date ? (
+                <span className="featured-date">
+                  <i className="fa-regular fa-clock me-1" />
+                  {featured.date}
+                </span>
+              ) : null}
             </Link>
           </div>
         </div>
