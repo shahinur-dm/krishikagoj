@@ -24,6 +24,40 @@ function isBodoliCategory(cat) {
   return cat?.slug === 'bodoli' || String(cat?.name || '').includes('বদলি')
 }
 
+function getSidebarForSection(cat, categoryBlocks, sectionSidebars) {
+  if (!cat) return null
+  const slug = cat.slug
+  const config = sectionSidebars?.[slug]
+
+  // If explicitly disabled in admin
+  if (config && config.enabled === false) return null
+
+  let targetSlug = config?.categorySlug
+  if (targetSlug === undefined || targetSlug === null) {
+    // Default fallback for sections that traditionally display the projukti sidebar
+    if (isBodoliCategory(cat) || usesKrishokerKothaLayout(cat) || usesShikkhaLayout(cat)) {
+      targetSlug = 'projukti'
+    }
+  }
+
+  if (!targetSlug) return null
+
+  const targetBlock = categoryBlocks.find(
+    (b) => b.cat.slug === targetSlug || (targetSlug === 'projukti' && usesProjuktiLayout(b.cat)),
+  )
+  if (!targetBlock || !targetBlock.articles?.length) return null
+
+  const limit = Math.max(2, Math.min(10, Number(config?.limit) || 5))
+  const articles = targetBlock.articles.slice(0, limit)
+  const title = (config?.title && config.title.trim()) || targetBlock.cat.name
+
+  return {
+    title,
+    slug: targetBlock.cat.slug,
+    articles,
+  }
+}
+
 export default function HomePage() {
   const {
     headlines,
@@ -92,12 +126,7 @@ export default function HomePage() {
   const fisheriesBlock = categoryBlocks.find(
     (block) =>
       block.articles?.length &&
-      (block.cat.slug === 'motso' || String(block.cat.name || '').includes('মৎস্য')),
-  )
-  const bodoliSideBlock = categoryBlocks.find(
-    (block) =>
-      block.articles?.length &&
-      (block.cat.slug === BODOLI_SIDE_CATEGORY_SLUG || usesProjuktiLayout(block.cat)),
+      (block.cat.slug === 'motso' || String(block.cat?.name || '').includes('মৎস্য')),
   )
 
   return (
@@ -186,18 +215,7 @@ export default function HomePage() {
                     }
                   : null
               }
-              sideCategory={
-                (isBodoliCategory(cat) ||
-                  usesKrishokerKothaLayout(cat) ||
-                  usesShikkhaLayout(cat)) &&
-                bodoliSideBlock
-                  ? {
-                      title: bodoliSideBlock.cat.name,
-                      slug: bodoliSideBlock.cat.slug,
-                      articles: bodoliSideBlock.articles,
-                    }
-                  : null
-              }
+              sideCategory={getSidebarForSection(cat, categoryBlocks, settings?.sectionSidebars)}
             />
           )
         })}

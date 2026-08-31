@@ -21,6 +21,7 @@ const siteSettingSchema = new mongoose.Schema(
       storyList: { type: [String], default: () => Array(8).fill('') },
     },
     sectionSlots: { type: mongoose.Schema.Types.Mixed, default: {} },
+    sectionSidebars: { type: mongoose.Schema.Types.Mixed, default: {} },
     lazyBanner: { type: String, default: '' },
     facebookPage: { type: String, default: '' },
     phoneBn: { type: String, default: '' },

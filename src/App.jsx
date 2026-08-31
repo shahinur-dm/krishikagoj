@@ -47,6 +47,7 @@ const OpinionAdminPage = lazy(() => import('./pages/admin/OpinionAdminPage'))
 const PollAdminPage = lazy(() => import('./pages/admin/PollAdminPage'))
 const SurveyAdminPage = lazy(() => import('./pages/admin/SurveyAdminPage'))
 const CmsPageAdminPage = lazy(() => import('./pages/admin/CmsPageAdminPage'))
+const SidebarSettingsPage = lazy(() => import('./pages/admin/SidebarSettingsPage'))
 const CmsPageView = lazy(() => import('./pages/CmsPageView'))
 const SurveyView = lazy(() => import('./pages/SurveyView'))
 
@@ -105,6 +106,7 @@ export default function App() {
             <Route path="notice" element={<NoticePage />} />
             <Route path="social" element={<SocialPage />} />
             <Route path="home-lead" element={<HomeLeadPage />} />
+            <Route path="sidebars" element={<SidebarSettingsPage />} />
             <Route path="topic-grid" element={<TopicGridPage />} />
             <Route path="ai" element={<AiSettingsPage />} />
             <Route path="opinions" element={<OpinionAdminPage />} />

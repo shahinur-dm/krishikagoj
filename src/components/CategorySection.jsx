@@ -772,8 +772,7 @@ function CategoryHeroGridWithSidebar({
   const grid = completeRows(articles.slice(1), 3).slice(0, 6)
   if (!featured || !grid.length) return null
   const kothaBound = slug === 'krishoker-kotha' || String(title || '').includes('কৃষকের কথা')
-  const shikkhaBound = slug === 'shikkha' || String(title || '').includes('কৃষি শিক্ষা')
-  const showCollegeSide = (kothaBound || shikkhaBound) && sideCategory?.articles?.length
+  const showCollegeSide = Boolean(sideCategory?.articles?.length)
   return (
     <section className={`mt-3 cat-section-with-ad home-layout-hero-grid${kothaBound ? ' home-kotha-bound' : ''}`}>
       <div className="container">

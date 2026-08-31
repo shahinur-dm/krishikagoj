@@ -105,6 +105,7 @@ const COPY = {
     homeLeadHelp:
       'পেজ বেছে নিন, খবর টেনে বসান। ডিলিট শুধু পজিশন খালি করে — খবর মুছে যায় না। সেভ করলে শুধু ওই পেজেই দেখাবে।',
     resetPositions: 'সব রিসেট',
+    navSidebars: 'সাইডবার সেটিং',
     navPhotos: 'ফটো গ্যালারি',
     navVideos: 'ভিডিও গ্যালারি',
     navStaff: 'স্টাফ',
@@ -277,8 +278,10 @@ const COPY = {
     siteLiveDesc: 'Open live portal',
     homeLeadTitle: 'News position manager',
     homeLeadHelp:
-      'Pick a page, then drag news into slots. Delete only unassigns a slot — it does not remove the article. Save applies only to that page.',
+      'Select page, drag news into position. Delete only empties slot — does not remove article. Saving updates that page.',
     resetPositions: 'Reset all',
+    navSidebars: 'Sidebar Settings',
+    navPhotos: 'Photo gallery',
     save: 'Save',
     saving: 'Saving...',
     deleteAll: 'Delete all',
