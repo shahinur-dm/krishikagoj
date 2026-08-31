@@ -7382,6 +7382,19 @@ main,
   /* ---------------------------------------------------- */
   /* Lead Section & Cards                                 */
   /* ---------------------------------------------------- */
+  .lead-3col {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  .lead-3col-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
   .heading-section .lead-news .row {
     flex-direction: column !important;
     margin: 0 !important;
@@ -7420,34 +7433,206 @@ main,
   .heading-section .lead-news .news-summary {
     padding: 6px 12px 0 !important;
     overflow-wrap: anywhere !important;
+    font-size: 14.5px !important;
+    line-height: 22px !important;
+    color: #4b5563 !important;
   }
 
+  /* Lead 2-column grid: ALL cards in clean 2-column grid like Education Bangla */
   .heading-section .lead-3col-grid-box .equal-news-grid {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 10px !important;
     width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .heading-section .lead-3col-grid-box .equal-news-grid > .col-12.col-lg-4 {
     width: 100% !important;
     max-width: 100% !important;
+    flex: none !important;
     padding: 0 !important;
     margin: 0 !important;
     border: 0 !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
   }
 
-  .heading-section .lead-3col-grid-box .equal-news-grid > .col-12.col-lg-4:nth-child(n + 5) {
-    grid-column: 1 / -1 !important;
+  .heading-section .lead-3col-grid-box .news-sm {
+    width: 100% !important;
+    height: 100% !important;
+    background: #fff !important;
+    border: 1px solid #e8e8e8 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
   }
 
-  .heading-section .lead-3col-grid-box .equal-news-grid > .col-12.col-lg-4:nth-child(n + 5) .news-sm > a {
-    display: grid !important;
-    grid-template-columns: 115px minmax(0, 1fr) !important;
-    gap: 10px !important;
-    align-items: start !important;
+  .heading-section .lead-3col-grid-box .news-sm a {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+  }
+
+  .heading-section .lead-3col-grid-box .news-sm .img-zoom-hover {
+    width: 100% !important;
+    aspect-ratio: 16 / 10 !important;
+    overflow: hidden !important;
+    border-radius: 0 !important;
+  }
+
+  .heading-section .lead-3col-grid-box .news-sm .title {
+    font-size: 14px !important;
+    line-height: 20px !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+    padding: 8px !important;
+    margin: 0 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+
+  /* Mid list on mobile */
+  .lead-side-mid {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  .lead-mid-item {
     padding: 10px 0 !important;
     border-bottom: 1px solid #ececec !important;
+    width: 100% !important;
+  }
+
+  .lead-mid-item:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .lead-mid-item a {
+    display: grid !important;
+    grid-template-columns: 115px minmax(0, 1fr) !important;
+    gap: 12px !important;
+    align-items: start !important;
+    width: 100% !important;
+  }
+
+  .lead-mid-thumb .img-zoom-hover {
+    width: 100% !important;
+    aspect-ratio: 16 / 10 !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+  }
+
+  .lead-mid-body {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .lead-mid-body .title {
+    font-size: 15.5px !important;
+    line-height: 22px !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+    margin: 0 0 4px !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+
+  .lead-mid-date {
+    font-size: 12.5px !important;
+    color: #6b7280 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+
+  /* Story list on mobile */
+  .lead-side-story {
+    width: 100% !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  .lead-side-story-hero {
+    margin-bottom: 10px !important;
+  }
+
+  .lead-side-story-hero .img-zoom-hover {
+    aspect-ratio: 16 / 9 !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+  }
+
+  .lead-side-story-list {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .lead-story-item {
+    padding: 10px 0 !important;
+    border-bottom: 1px solid #ececec !important;
+    width: 100% !important;
+  }
+
+  .lead-story-item:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .lead-story-item a {
+    display: grid !important;
+    grid-template-columns: 115px minmax(0, 1fr) !important;
+    gap: 12px !important;
+    align-items: start !important;
+    width: 100% !important;
+  }
+
+  .lead-story-thumb .img-zoom-hover {
+    width: 100% !important;
+    aspect-ratio: 16 / 10 !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+  }
+
+  .lead-story-body {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .lead-story-body .title {
+    font-size: 15.5px !important;
+    line-height: 22px !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+    margin: 0 0 4px !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+
+  .lead-story-date {
+    font-size: 12.5px !important;
+    color: #6b7280 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
   }
 
   /* ---------------------------------------------------- */
