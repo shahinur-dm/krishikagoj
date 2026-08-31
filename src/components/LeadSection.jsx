@@ -144,6 +144,17 @@ export default function LeadSection({
   const slots = resolveSlots(leadLayout, featured, headlines, latest, popular, recent)
   if (!slots.lead && !slots.story && !slots.grid.length) return null
   const labelOf = (item) => (item ? text(item.title, item.titleEn) : '')
+  const summaryOf = (item) => {
+    if (!item) return ''
+    const exc = text(item.excerpt, item.excerptEn)
+    if (exc && exc.trim().length > 50) return exc
+    const body = text(item.body, item.bodyEn)
+    if (body) {
+      const plain = String(body).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      if (plain) return plain.slice(0, 220) + (plain.length > 220 ? '...' : '')
+    }
+    return exc || ''
+  }
 
   return (
     <section className="heading-section mt-4" id="top-lead-content">
@@ -167,9 +178,7 @@ export default function LeadSection({
                       </div>
                       <div className="col-lg-5 mt-2 mt-lg-0">
                         <h3 className="title">{labelOf(slots.lead)}</h3>
-                        <p className="news-summary">
-                          {text(slots.lead.excerpt, slots.lead.excerptEn)}
-                        </p>
+                        <p className="news-summary">{summaryOf(slots.lead)}</p>
                       </div>
                     </div>
                   </Link>
