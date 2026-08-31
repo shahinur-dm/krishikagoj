@@ -22,6 +22,8 @@ export default function AddNewPostForm({
   setError,
   onSubmit,
   emptyForm,
+  isEdit = false,
+  originalData = null,
 }) {
   const [writerOpen, setWriterOpen] = useState(false)
   const [writerSaving, setWriterSaving] = useState(false)
@@ -51,10 +53,14 @@ export default function AddNewPostForm({
   }
 
   function resetForm() {
-    setForm({
-      ...emptyForm,
-      releaseDate: new Date().toISOString().slice(0, 10),
-    })
+    if (isEdit && originalData) {
+      setForm({ ...originalData })
+    } else {
+      setForm({
+        ...emptyForm,
+        releaseDate: new Date().toISOString().slice(0, 10),
+      })
+    }
     setError('')
   }
 
@@ -117,7 +123,7 @@ export default function AddNewPostForm({
 
         <div className="admin-card add-new-post-card">
           <div className="admin-card-header">
-            <h3>Add New Post</h3>
+            <h3>{isEdit ? 'Edit Post' : 'Add New Post'}</h3>
           </div>
           <div className="admin-card-body">
             <form onSubmit={onSubmit}>
@@ -445,11 +451,16 @@ export default function AddNewPostForm({
               </div>
 
               <div className="anp-actions">
-                <button type="button" className="anp-reset" onClick={resetForm} title="Reset">
+                <button
+                  type="button"
+                  className="anp-reset"
+                  onClick={resetForm}
+                  title={isEdit ? 'Reset to original' : 'Reset'}
+                >
                   <i className="fa-solid fa-rotate-left" />
                 </button>
                 <button type="submit" className="anp-save" disabled={saving || slugInvalid}>
-                  {saving ? 'Saving...' : 'Save'}
+                  {saving ? (isEdit ? 'Updating...' : 'Saving...') : isEdit ? 'Update' : 'Save'}
                 </button>
               </div>
             </form>
