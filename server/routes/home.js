@@ -152,6 +152,7 @@ function slimSettings(s) {
     homepageSlots: s.homepageSlots || null,
     sectionSlots: s.sectionSlots || {},
     sectionSidebars: s.sectionSidebars || {},
+    discussedConfig: s.discussedConfig || {},
     tagline: s.tagline,
     hotline: s.hotline,
     notice: s.notice,
@@ -252,7 +253,7 @@ router.get('/', async (req, res) => {
         .lean(),
       SiteSetting.findOne({ key: 'site' })
         .select(
-          'siteName tagline hotline notice logo favicon email phoneBn addressBn aboutUs facebookPage liveTvLink liveTvEmbed chiefAdvisor publisher managingEditor social namaz seo themeColor homepageLayout homepageSlots sectionSlots sectionSidebars adsEnabled topicGridLimit topicGridSlug',
+          'siteName tagline hotline notice logo favicon email phoneBn addressBn aboutUs facebookPage liveTvLink liveTvEmbed chiefAdvisor publisher managingEditor social namaz seo themeColor homepageLayout homepageSlots sectionSlots sectionSidebars discussedConfig adsEnabled topicGridLimit topicGridSlug',
         )
         .lean(),
       ImportantWebsite.find({ isActive: { $ne: false } })

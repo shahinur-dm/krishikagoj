@@ -22,6 +22,7 @@ const siteSettingSchema = new mongoose.Schema(
     },
     sectionSlots: { type: mongoose.Schema.Types.Mixed, default: {} },
     sectionSidebars: { type: mongoose.Schema.Types.Mixed, default: {} },
+    discussedConfig: { type: mongoose.Schema.Types.Mixed, default: {} },
     lazyBanner: { type: String, default: '' },
     facebookPage: { type: String, default: '' },
     phoneBn: { type: String, default: '' },

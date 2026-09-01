@@ -110,8 +110,30 @@ export default function HomePage() {
     return <div className="container eb-error">লোড ত্রুটি: {error}</div>
   }
 
-  const discussedArticles = featured.length ? featured : latest
-  const discussedSlug = categoryBlocks[0]?.cat?.slug
+  const discussedConf = settings?.discussedConfig || {}
+  const discussedEnabled = discussedConf.enabled !== false
+  const discussedTitle = (discussedConf.title && discussedConf.title.trim()) || t.discussed
+
+  let discussedArticles = featured.length ? featured : latest
+  let discussedSlug = categoryBlocks[0]?.cat?.slug
+
+  if (discussedConf.sourceType === 'popular') {
+    discussedArticles = popular
+  } else if (discussedConf.sourceType === 'latest') {
+    discussedArticles = latest
+  } else if (discussedConf.sourceType === 'featured') {
+    discussedArticles = featured.length ? featured : latest
+  } else if (discussedConf.sourceType === 'category' || discussedConf.categorySlug) {
+    const targetSlug = discussedConf.categorySlug
+    const block = categoryBlocks.find(
+      (b) => b.cat.slug === targetSlug || b.cat.name === targetSlug || String(b.cat._id) === targetSlug,
+    )
+    if (block && block.articles?.length) {
+      discussedArticles = block.articles
+      discussedSlug = block.cat.slug
+    }
+  }
+
   const siteName = settings?.siteName || 'কৃষিকাগজ'
   const seo = settings?.seo || {}
   const pageTitle = seo.metaTitle || `${siteName}${settings?.tagline ? ` | ${settings.tagline}` : ''}`
@@ -166,12 +188,14 @@ export default function HomePage() {
 
       <VideoGallerySection videos={videos} />
 
-      <CategorySection
-        title={t.discussed}
-        slug={discussedSlug}
-        articles={discussedArticles}
-        variant="grid4"
-      />
+      {discussedEnabled && (
+        <CategorySection
+          title={discussedTitle}
+          slug={discussedSlug}
+          articles={discussedArticles}
+          variant="grid4"
+        />
+      )}
 
       {showRest &&
         categoryBlocks.map(({ cat, articles }, index) => {

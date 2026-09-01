@@ -3,18 +3,36 @@ import { api } from '../../api/client'
 import { refreshSiteData } from '../../context/SiteDataContext'
 
 const empty = { name: '', nameEn: '', slug: '', description: '', order: 0, isActive: true }
+const defaultDiscussed = {
+  title: 'আলোচিত',
+  sourceType: 'featured',
+  categorySlug: '',
+  enabled: true,
+}
 
 export default function CategoriesPage() {
   const [items, setItems] = useState([])
   const [form, setForm] = useState(empty)
   const [editingId, setEditingId] = useState(null)
+  const [discussedForm, setDiscussedForm] = useState(defaultDiscussed)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const formRef = useRef(null)
 
   async function load() {
-    const data = await api.getAllCategories()
-    setItems(data)
+    const [cats, siteSettings] = await Promise.all([
+      api.getAllCategories(),
+      api.getSettings().catch(() => null),
+    ])
+    setItems(cats || [])
+    if (siteSettings?.discussedConfig) {
+      setDiscussedForm({
+        title: siteSettings.discussedConfig.title || 'আলোচিত',
+        sourceType: siteSettings.discussedConfig.sourceType || (siteSettings.discussedConfig.categorySlug ? 'category' : 'featured'),
+        categorySlug: siteSettings.discussedConfig.categorySlug || '',
+        enabled: siteSettings.discussedConfig.enabled !== false,
+      })
+    }
   }
 
   useEffect(() => {
@@ -39,6 +57,11 @@ export default function CategoriesPage() {
     requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
+  function startEditDiscussed() {
+    setEditingId('discussed')
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
   function resetForm() {
     setEditingId(null)
     setForm(empty)
@@ -48,6 +71,21 @@ export default function CategoriesPage() {
     e.preventDefault()
     setError('')
     try {
+      if (editingId === 'discussed') {
+        const payload = {
+          title: String(discussedForm.title || '').trim() || 'আলোচিত',
+          sourceType: discussedForm.sourceType || 'featured',
+          categorySlug: discussedForm.sourceType === 'category' ? discussedForm.categorySlug : '',
+          enabled: discussedForm.enabled !== false,
+        }
+        await api.updateSettings({ discussedConfig: payload })
+        flash('আলোচিত সেকশন কনফিগারেশন আপডেট হয়েছে')
+        setEditingId(null)
+        await load()
+        await refreshSiteData().catch(() => {})
+        return
+      }
+
       const payload = { ...form }
       if (!String(payload.slug || '').trim()) {
         payload.slug = String(payload.nameEn || '')
@@ -89,70 +127,161 @@ export default function CategoriesPage() {
       {error && <div className="admin-alert admin-alert-error">{error}</div>}
 
       <div className="admin-card">
-        <div className="admin-card-header">
-          <h3>{editingId ? 'ক্যাটাগরি সম্পাদনা' : 'নতুন ক্যাটাগরি'}</h3>
+        <div className="admin-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h3 style={{ margin: 0 }}>
+            {editingId === 'discussed'
+              ? 'আলোচিত সেকশন সম্পাদনা'
+              : editingId
+              ? 'ক্যাটাগরি সম্পাদনা'
+              : 'নতুন ক্যাটাগরি'}
+          </h3>
+          {editingId !== 'discussed' && (
+            <button
+              type="button"
+              className="admin-btn admin-btn-sm admin-btn-secondary"
+              onClick={startEditDiscussed}
+            >
+              <i className="fa-solid fa-star me-1" style={{ color: '#0284c7' }} /> আলোচিত সেকশন সম্পাদনা
+            </button>
+          )}
         </div>
         <div className="admin-card-body" ref={formRef}>
-          <form onSubmit={handleSubmit}>
-            <div className="admin-form-row">
-              <div className="admin-form-group">
-                <label>নাম (বাংলা) *</label>
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                />
+          {editingId === 'discussed' ? (
+            <form onSubmit={handleSubmit}>
+              <div className="admin-form-row">
+                <div className="admin-form-group">
+                  <label>সেকশন শিরোনাম (বাংলা) *</label>
+                  <input
+                    value={discussedForm.title}
+                    onChange={(e) => setDiscussedForm({ ...discussedForm, title: e.target.value })}
+                    placeholder="আলোচিত"
+                    required
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>কনটেন্ট / ক্যাটাগরি সোর্স *</label>
+                  <select
+                    value={
+                      discussedForm.sourceType === 'category'
+                        ? `category:${discussedForm.categorySlug}`
+                        : discussedForm.sourceType
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val.startsWith('category:')) {
+                        setDiscussedForm({
+                          ...discussedForm,
+                          sourceType: 'category',
+                          categorySlug: val.replace('category:', ''),
+                        })
+                      } else {
+                        setDiscussedForm({
+                          ...discussedForm,
+                          sourceType: val,
+                          categorySlug: '',
+                        })
+                      }
+                    }}
+                    className="admin-input"
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                  >
+                    <option value="featured">⭐️ ফিচার্ড / প্রধান খবর (Default Featured)</option>
+                    <option value="latest">⚡️ সর্বশেষ খবর (Latest News)</option>
+                    <option value="popular">🔥 সর্বাধিক পঠিত / জনপ্রিয় খবর (Popular News)</option>
+                    <optgroup label="-- নির্দিষ্ট ক্যাটাগরির খবর --">
+                      {items
+                        .filter((c) => c.slug && c.slug !== 'home')
+                        .map((cat) => (
+                          <option key={cat.slug} value={`category:${cat.slug}`}>
+                            📁 ক্যাটাগরি: {cat.name} ({cat.slug})
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
+                </div>
               </div>
-              <div className="admin-form-group">
-                <label>নাম (ইংরেজি)</label>
+              <p style={{ fontSize: '13px', color: '#64748b', margin: '0.25rem 0 0.75rem' }}>
+                হোমপেজের ভিডিও গ্যালারির নিচে অবস্থিত “{discussedForm.title || 'আলোচিত'}” সেকশনে কোন খবর দেখাবে তা নির্বাচন করুন।
+              </p>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                 <input
-                  value={form.nameEn}
-                  onChange={(e) => setForm({ ...form, nameEn: e.target.value })}
-                />
-              </div>
-              <div className="admin-form-group">
-                <label>স্লাগ</label>
-                <input
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  placeholder="খালি রাখলে স্বয়ংক্রিয় তৈরি হবে"
-                />
-              </div>
-              <div className="admin-form-group">
-                <label>অর্ডার</label>
-                <input
-                  type="number"
-                  value={form.order}
-                  onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-            <div className="admin-form-group">
-              <label>বিবরণ</label>
-              <input
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-            <label>
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-              />{' '}
-              সক্রিয়
-            </label>
-            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-              <button type="submit" className="admin-btn admin-btn-primary">
-                {editingId ? 'আপডেট' : 'যোগ করুন'}
-              </button>
-              {editingId && (
+                  type="checkbox"
+                  checked={discussedForm.enabled}
+                  onChange={(e) => setDiscussedForm({ ...discussedForm, enabled: e.target.checked })}
+                />{' '}
+                হোমপেজে এই সেকশনটি চালু রাখুন (Active)
+              </label>
+              <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                <button type="submit" className="admin-btn admin-btn-primary">
+                  আপডেট করুন
+                </button>
                 <button type="button" className="admin-btn admin-btn-secondary" onClick={resetForm}>
                   বাতিল
                 </button>
-              )}
-            </div>
-          </form>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <div className="admin-form-row">
+                <div className="admin-form-group">
+                  <label>নাম (বাংলা) *</label>
+                  <input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>নাম (ইংরেজি)</label>
+                  <input
+                    value={form.nameEn}
+                    onChange={(e) => setForm({ ...form, nameEn: e.target.value })}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>স্লাগ</label>
+                  <input
+                    value={form.slug}
+                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                    placeholder="খালি রাখলে স্বয়ংক্রিয় তৈরি হবে"
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>অর্ডার</label>
+                  <input
+                    type="number"
+                    value={form.order}
+                    onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="admin-form-group">
+                <label>বিবরণ</label>
+                <input
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              </div>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                />{' '}
+                সক্রিয়
+              </label>
+              <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                <button type="submit" className="admin-btn admin-btn-primary">
+                  {editingId ? 'আপডেট' : 'যোগ করুন'}
+                </button>
+                {editingId && (
+                  <button type="button" className="admin-btn admin-btn-secondary" onClick={resetForm}>
+                    বাতিল
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
         </div>
       </div>
 
@@ -167,13 +296,49 @@ export default function CategoriesPage() {
                 <th>#</th>
                 <th>নাম</th>
                 <th>ইংরেজি</th>
-                <th>স্লাগ</th>
+                <th>স্লাগ / উৎস</th>
                 <th>অর্ডার</th>
                 <th>স্ট্যাটাস</th>
                 <th>অ্যাকশন</th>
               </tr>
             </thead>
             <tbody>
+              <tr style={{ background: '#f8fafc', borderLeft: '3px solid #0284c7' }}>
+                <td><i className="fa-solid fa-star" style={{ color: '#0284c7' }} title="হোমপেজ সেকশন" /></td>
+                <td>
+                  <strong>{discussedForm.title || 'আলোচিত'}</strong>{' '}
+                  <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '2px 7px', borderRadius: '10px', fontWeight: 600 }}>
+                    হোমপেজ সেকশন
+                  </span>
+                </td>
+                <td>Featured / Discussed</td>
+                <td>
+                  <code style={{ fontSize: '12px', background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px' }}>
+                    {discussedForm.sourceType === 'category'
+                      ? `ক্যাটাগরি: ${discussedForm.categorySlug}`
+                      : discussedForm.sourceType === 'popular'
+                      ? 'জনপ্রিয় খবর'
+                      : discussedForm.sourceType === 'latest'
+                      ? 'সর্বশেষ খবর'
+                      : 'ফিচার্ড খবর'}
+                  </code>
+                </td>
+                <td>—</td>
+                <td>
+                  <span style={{ color: discussedForm.enabled !== false ? '#16a34a' : '#94a3b8', fontWeight: 600 }}>
+                    {discussedForm.enabled !== false ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
+                  </span>
+                </td>
+                <td className="admin-table-actions">
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-sm admin-btn-primary"
+                    onClick={startEditDiscussed}
+                  >
+                    সম্পাদনা
+                  </button>
+                </td>
+              </tr>
               {items.map((item, i) => (
                 <tr key={item._id}>
                   <td>{i + 1}</td>
