@@ -2,9 +2,10 @@ import { Router } from 'express'
 import Survey from '../models/Survey.js'
 import SurveyResponse from '../models/SurveyResponse.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
+import { cacheDel } from '../utils/cache.js'
 
 const router = Router()
-const guard = requirePermission('setting', 'post')
+const guard = requirePermission('setting', 'post', 'category')
 
 function publicSurvey(item) {
   return {
@@ -49,6 +50,7 @@ router.post('/:id/respond', async (req, res) => {
     await SurveyResponse.create({ survey: item._id, answers })
     item.responseCount = (item.responseCount || 0) + 1
     await item.save()
+    cacheDel('home')
     res.status(201).json({ ok: true, responseCount: item.responseCount })
   } catch (err) {
     res.status(400).json({ message: err.message })
@@ -105,8 +107,9 @@ function normalizeSurvey(body) {
 router.post('/', requireAuth, guard, async (req, res) => {
   try {
     const data = normalizeSurvey(req.body)
-    if (!data.title) return res.status(400).json({ message: 'Title required' })
+    if (!data.title) return res.status(400).json({ message: 'শিরোনাম আবশ্যক' })
     const item = await Survey.create(data)
+    cacheDel('home')
     res.status(201).json(item)
   } catch (err) {
     res.status(400).json({ message: err.message })
@@ -116,9 +119,10 @@ router.post('/', requireAuth, guard, async (req, res) => {
 router.put('/:id', requireAuth, guard, async (req, res) => {
   try {
     const data = normalizeSurvey(req.body)
-    if (!data.title) return res.status(400).json({ message: 'Title required' })
+    if (!data.title) return res.status(400).json({ message: 'শিরোনাম আবশ্যক' })
     const item = await Survey.findByIdAndUpdate(req.params.id, { $set: data }, { new: true })
     if (!item) return res.status(404).json({ message: 'Not found' })
+    cacheDel('home')
     res.json(item)
   } catch (err) {
     res.status(400).json({ message: err.message })
@@ -130,6 +134,7 @@ router.delete('/:id', requireAuth, guard, async (req, res) => {
     const item = await Survey.findByIdAndDelete(req.params.id)
     if (!item) return res.status(404).json({ message: 'Not found' })
     await SurveyResponse.deleteMany({ survey: item._id })
+    cacheDel('home')
     res.json({ message: 'Deleted' })
   } catch (err) {
     res.status(500).json({ message: err.message })

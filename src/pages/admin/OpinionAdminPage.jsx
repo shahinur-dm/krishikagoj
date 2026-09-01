@@ -4,6 +4,7 @@ import { api } from '../../api/client'
 import ImageUploadField from '../../components/admin/ImageUploadField'
 import SafeImage from '../../components/SafeImage'
 import { useLang } from '../../context/LanguageContext'
+import { refreshSiteData } from '../../context/SiteDataContext'
 
 const empty = { name: '', title: '', details: '', image: '', language: 'bn', status: 'published' }
 
@@ -39,20 +40,38 @@ function OpinionList() {
   const { t } = useLang()
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const pager = usePager(items, ['name', 'title', 'language', 'status'])
 
+  async function load() {
+    try {
+      const data = await api.getOpinions()
+      setItems(data || [])
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   useEffect(() => {
-    api.getOpinions().then(setItems).catch((err) => setError(err.message))
+    load()
   }, [])
 
   async function remove(itemId) {
-    if (!confirm(t.confirmDelete)) return
-    await api.deleteOpinion(itemId)
-    setItems(await api.getOpinions())
+    if (!confirm(t.confirmDelete || 'মুছে ফেলতে চান?')) return
+    try {
+      await api.deleteOpinion(itemId)
+      setMessage('মতামত মুছে ফেলা হয়েছে')
+      setTimeout(() => setMessage(''), 2500)
+      await load()
+      await refreshSiteData().catch(() => {})
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   return (
     <div>
+      {message ? <div className="admin-alert admin-alert-success">{message}</div> : null}
       {error ? <div className="admin-alert admin-alert-error">{error}</div> : null}
       <div className="admin-card">
         <div className="admin-card-header">
@@ -91,7 +110,7 @@ function OpinionList() {
                     <tr key={item._id}>
                       <td>{(pager.page - 1) * 10 + i + 1}</td>
                       <td>{item.name}</td>
-                      <td>{item.image ? <SafeImage src={item.image} alt="" className="thumb" /> : '—'}</td>
+                      <td>{item.image ? <SafeImage src={item.image} alt="" className="thumb" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: '50%' }} /> : '—'}</td>
                       <td>{item.title}</td>
                       <td>{item.language === 'en' ? 'English' : 'Bengali/Bangla'}</td>
                       <td>{item.status}</td>
@@ -100,7 +119,7 @@ function OpinionList() {
                           Edit
                         </Link>
                         <button type="button" className="admin-btn admin-btn-sm admin-btn-danger" onClick={() => remove(item._id)}>
-                          {t.delete}
+                          {t.delete || 'Delete'}
                         </button>
                       </td>
                     </tr>
@@ -127,9 +146,11 @@ function OpinionForm({ id }) {
 
   async function onSubmit(e) {
     e.preventDefault()
+    setError('')
     try {
       if (isEdit) await api.updateOpinion(id, form)
       else await api.createOpinion(form)
+      await refreshSiteData().catch(() => {})
       navigate('/admin/opinions')
     } catch (err) {
       setError(err.message)
@@ -140,22 +161,25 @@ function OpinionForm({ id }) {
     <div>
       {error ? <div className="admin-alert admin-alert-error">{error}</div> : null}
       <div className="admin-card">
-        <div className="admin-card-header">
+        <div className="admin-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>{isEdit ? 'Edit opinion' : 'Add New Opinion'}</h3>
+          <Link to="/admin/opinions" className="admin-btn admin-btn-secondary">
+            Back
+          </Link>
         </div>
         <div className="admin-card-body">
           <form onSubmit={onSubmit}>
-            <ImageUploadField label="Person image" value={form.image} onChange={(image) => setForm({ ...form, image })} />
+            <ImageUploadField label="Person image / লেখক ছবি" value={form.image} onChange={(image) => setForm({ ...form, image })} />
             <div className="admin-form-group">
-              <label>Name *</label>
+              <label>Name (লেখক নাম) *</label>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </div>
             <div className="admin-form-group">
-              <label>Title *</label>
+              <label>Title (মতামত শিরোনাম) *</label>
               <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
             </div>
             <div className="admin-form-group">
-              <label>Details</label>
+              <label>Details (বিস্তারিত)</label>
               <textarea rows={6} value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} />
             </div>
             <div className="admin-form-row">
@@ -174,9 +198,14 @@ function OpinionForm({ id }) {
                 </select>
               </div>
             </div>
-            <button type="submit" className="admin-btn admin-btn-primary">
-              Save
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+              <button type="submit" className="admin-btn admin-btn-primary">
+                Save
+              </button>
+              <Link to="/admin/opinions" className="admin-btn admin-btn-secondary">
+                Cancel
+              </Link>
+            </div>
           </form>
         </div>
       </div>

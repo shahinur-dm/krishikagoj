@@ -6,6 +6,7 @@ import { requireAuth, requirePermission, canSeeAllPosts } from '../middleware/au
 import { ARTICLE_LIST_SELECT, ARTICLE_DETAIL_SELECT } from '../utils/articleFields.js'
 import { cacheDel, cacheGet, cacheSet } from '../utils/cache.js'
 import { applyArticleSeoDefaults, slugify } from '../utils/seoContent.js'
+import Opinion from '../models/Opinion.js'
 
 const router = Router()
 
@@ -224,15 +225,42 @@ router.get('/:idOrSlug', async (req, res) => {
   try {
     const { idOrSlug } = req.params
     const isId = /^[0-9a-fA-F]{24}$/.test(idOrSlug)
-    const article = await populateArticle(
+    let article = await populateArticle(
       isId
         ? Article.findOne({ _id: idOrSlug, isPublished: true }).select(ARTICLE_DETAIL_SELECT)
         : Article.findOne({ slug: idOrSlug, isPublished: true }).select(ARTICLE_DETAIL_SELECT),
     ).lean()
 
+    if (!article && isId) {
+      const opinion = await Opinion.findById(idOrSlug).lean()
+      if (opinion) {
+        article = {
+          _id: opinion._id,
+          title: opinion.title,
+          titleEn: '',
+          slug: String(opinion._id),
+          body: opinion.details || '',
+          bodyEn: '',
+          excerpt: opinion.details ? opinion.details.slice(0, 160) : '',
+          excerptEn: '',
+          image: opinion.image || '',
+          author: opinion.name,
+          authorImage: opinion.image || '',
+          category: { name: 'মতামত', nameEn: 'Opinion', slug: 'motamot' },
+          subcategory: { nameBn: 'মতামত', slug: 'motamot' },
+          publishedAt: opinion.createdAt,
+          createdAt: opinion.createdAt,
+          isPublished: opinion.status === 'published',
+          views: 1,
+        }
+      }
+    }
+
     if (!article) return res.status(404).json({ message: 'Article not found' })
 
-    Article.updateOne({ _id: article._id }, { $inc: { views: 1 } }).exec().catch(() => {})
+    if (article._id && !article.category?.nameEn) {
+      Article.updateOne({ _id: article._id }, { $inc: { views: 1 } }).exec().catch(() => {})
+    }
 
     res.set('Cache-Control', 'public, max-age=15')
     res.json({ ...article, views: (article.views || 0) + 1 })

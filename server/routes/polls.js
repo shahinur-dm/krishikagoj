@@ -1,9 +1,10 @@
 import { Router } from 'express'
 import Poll from '../models/Poll.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
+import { cacheDel } from '../utils/cache.js'
 
 const router = Router()
-const guard = requirePermission('setting', 'post')
+const guard = requirePermission('setting', 'post', 'category')
 
 function slimPublic(item) {
   return {
@@ -42,6 +43,7 @@ router.post('/:id/vote', async (req, res) => {
     item.votes[index] = (item.votes[index] || 0) + 1
     item.markModified('votes')
     await item.save()
+    cacheDel('home')
     res.json(slimPublic(item))
   } catch (err) {
     res.status(400).json({ message: err.message })
@@ -71,7 +73,7 @@ function normalizePoll(body) {
   const options = (Array.isArray(body.options) ? body.options : String(body.options || '').split('\n'))
     .map((o) => String(o || '').trim())
     .filter(Boolean)
-  if (options.length < 2) throw new Error('At least two options required')
+  if (options.length < 2) throw new Error('কমপক্ষে দুটি অপশন প্রয়োজন')
   const votes = options.map((_, i) => Number(body.votes?.[i]) || 0)
   return {
     question: String(body.question || '').trim(),
@@ -86,8 +88,9 @@ function normalizePoll(body) {
 router.post('/', requireAuth, guard, async (req, res) => {
   try {
     const data = normalizePoll(req.body)
-    if (!data.question) return res.status(400).json({ message: 'Question required' })
+    if (!data.question) return res.status(400).json({ message: 'প্রশ্ন আবশ্যক' })
     const item = await Poll.create(data)
+    cacheDel('home')
     res.status(201).json(item)
   } catch (err) {
     res.status(400).json({ message: err.message })
@@ -96,10 +99,22 @@ router.post('/', requireAuth, guard, async (req, res) => {
 
 router.put('/:id', requireAuth, guard, async (req, res) => {
   try {
+    const existing = await Poll.findById(req.params.id)
+    if (!existing) return res.status(404).json({ message: 'Not found' })
+
     const data = normalizePoll(req.body)
-    if (!data.question) return res.status(400).json({ message: 'Question required' })
+    if (!data.question) return res.status(400).json({ message: 'প্রশ্ন আবশ্যক' })
+
+    // Preserve existing votes for matching options
+    if (req.body.votes === undefined && existing.options?.length) {
+      data.votes = data.options.map((opt) => {
+        const oldIndex = existing.options.indexOf(opt)
+        return oldIndex >= 0 ? Number(existing.votes?.[oldIndex]) || 0 : 0
+      })
+    }
+
     const item = await Poll.findByIdAndUpdate(req.params.id, { $set: data }, { new: true })
-    if (!item) return res.status(404).json({ message: 'Not found' })
+    cacheDel('home')
     res.json(item)
   } catch (err) {
     res.status(400).json({ message: err.message })
@@ -110,6 +125,7 @@ router.delete('/:id', requireAuth, guard, async (req, res) => {
   try {
     const item = await Poll.findByIdAndDelete(req.params.id)
     if (!item) return res.status(404).json({ message: 'Not found' })
+    cacheDel('home')
     res.json({ message: 'Deleted' })
   } catch (err) {
     res.status(500).json({ message: err.message })

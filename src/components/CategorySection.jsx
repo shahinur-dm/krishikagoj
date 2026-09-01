@@ -281,9 +281,10 @@ function CategoryBinodon({ title, slug, articles }) {
 }
 
 function opinionMeta(item, staff = []) {
-  const name = String(item?.author || item?.raw?.author || 'কৃষি ডেস্ক').trim() || 'কৃষি ডেস্ক'
+  const name = String(item?.author || item?.name || item?.raw?.author || 'কৃষি ডেস্ক').trim() || 'কৃষি ডেস্ক'
   const photo =
     item?.authorImage ||
+    item?.image ||
     item?.raw?.authorImage ||
     item?.raw?.authorUser?.image ||
     staff.find((person) => person?.name === name)?.image ||
@@ -308,12 +309,24 @@ function opinionLabel(item, fallback) {
   )
 }
 
-/** মতামত — compact right-side opinion list; existing news only */
-function CategoryMotamot({ title, slug, articles, embedded = false }) {
+/** মতামত — compact right-side opinion list */
+function CategoryMotamot({ title, slug, articles = [], embedded = false }) {
   const { text } = useLang()
-  const { staff } = useSiteData()
+  const { staff = [], opinions = [] } = useSiteData()
+  
+  const opinionItems = (opinions || []).map((o) => ({
+    id: o._id,
+    title: o.title,
+    author: o.name,
+    authorImage: o.image || '',
+    date: formatBnDate(o.createdAt),
+    path: `/news/${o._id}`,
+    subcategoryName: 'মতামত',
+  }))
+
+  const combined = [...opinionItems, ...(articles || [])]
   const seen = new Set()
-  const items = articles.filter((item) => {
+  const items = combined.filter((item) => {
     if (!item?.id || seen.has(item.id)) return false
     seen.add(item.id)
     return true

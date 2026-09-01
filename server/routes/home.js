@@ -12,6 +12,7 @@ import { ensureDemoAds, slimAd, isLive } from './ads.js'
 import { cacheGet, cacheSet } from '../utils/cache.js'
 import { isAdsGloballyEnabled } from '../utils/adsEnabled.js'
 import BreakingNews from '../models/BreakingNews.js'
+import Opinion from '../models/Opinion.js'
 
 const router = Router()
 const CACHE_KEY = 'home:v41'
@@ -224,6 +225,7 @@ router.get('/', async (req, res) => {
       websites,
       staff,
       breakingNews,
+      opinions,
     ] = await Promise.all([
       Category.find({ isActive: true }).select('name nameEn slug order').sort({ order: 1, name: 1 }).lean(),
       Article.find({ isPublished: true })
@@ -270,6 +272,11 @@ router.get('/', async (req, res) => {
         .select('titleBn titleEn order publishedAt')
         .sort({ order: 1, publishedAt: -1 })
         .limit(20)
+        .lean(),
+      Opinion.find({ status: 'published', isActive: { $ne: false } })
+        .select('name title details image createdAt')
+        .sort({ createdAt: -1 })
+        .limit(10)
         .lean(),
     ])
 
@@ -443,6 +450,14 @@ router.get('/', async (req, res) => {
         titleBn: b.titleBn,
         titleEn: b.titleEn || '',
         order: b.order ?? 1,
+      })),
+      opinions: (opinions || []).map((o) => ({
+        _id: o._id,
+        name: o.name,
+        title: o.title,
+        details: o.details || '',
+        image: o.image || '',
+        createdAt: o.createdAt,
       })),
     }
 

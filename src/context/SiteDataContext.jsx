@@ -95,6 +95,7 @@ function normalize(data) {
       items: (col.items || []).map(mapArticle).filter(Boolean),
     })),
     breakingNews: data.breakingNews || [],
+    opinions: data.opinions || [],
   }
 }
 
@@ -108,6 +109,7 @@ const empty = {
   recent: [],
   leadLayout: null,
   byCategory: {},
+  opinions: [],
   photos: [],
   videos: [],
   websites: [],

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { useLang } from '../../context/LanguageContext'
+import { refreshSiteData } from '../../context/SiteDataContext'
 
 const emptyQuestion = { text: '', type: 'single', optionsText: '' }
 const empty = { title: '', description: '', language: 'bn', status: 'published', questions: [{ ...emptyQuestion }] }
@@ -18,10 +19,20 @@ function SurveyList() {
   const { t } = useLang()
   const [items, setItems] = useState([])
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const [q, setQ] = useState('')
 
+  async function load() {
+    try {
+      const data = await api.getSurveys()
+      setItems(data || [])
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   useEffect(() => {
-    api.getSurveys().then(setItems).catch((err) => setError(err.message))
+    load()
   }, [])
 
   const rows = useMemo(() => {
@@ -31,13 +42,21 @@ function SurveyList() {
   }, [items, q])
 
   async function remove(itemId) {
-    if (!confirm(t.confirmDelete)) return
-    await api.deleteSurvey(itemId)
-    setItems(await api.getSurveys())
+    if (!confirm(t.confirmDelete || 'মুছে ফেলতে চান?')) return
+    try {
+      await api.deleteSurvey(itemId)
+      setMessage('জরিপ মুছে ফেলা হয়েছে')
+      setTimeout(() => setMessage(''), 2500)
+      await load()
+      await refreshSiteData().catch(() => {})
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   return (
     <div>
+      {message ? <div className="admin-alert admin-alert-success">{message}</div> : null}
       {error ? <div className="admin-alert admin-alert-error">{error}</div> : null}
       <div className="admin-card">
         <div className="admin-card-header">
@@ -86,7 +105,7 @@ function SurveyList() {
                           Edit
                         </Link>
                         <button type="button" className="admin-btn admin-btn-sm admin-btn-danger" onClick={() => remove(item._id)}>
-                          {t.delete}
+                          {t.delete || 'Delete'}
                         </button>
                       </td>
                     </tr>
@@ -134,22 +153,44 @@ function SurveyForm({ id }) {
     }))
   }
 
+  function removeQuestion(index) {
+    if (form.questions.length <= 1) return
+    setForm((prev) => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== index),
+    }))
+  }
+
   async function onSubmit(e) {
     e.preventDefault()
+    setError('')
+    const questions = form.questions
+      .map((q) => ({
+        text: String(q.text || '').trim(),
+        type: q.type || 'single',
+        options: (q.optionsText || '')
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      }))
+      .filter((q) => q.text)
+
+    if (questions.length === 0) {
+      setError('কমপক্ষে একটি প্রশ্ন যোগ করুন')
+      return
+    }
+
     const payload = {
-      title: form.title,
+      title: form.title.trim(),
       description: form.description,
       language: form.language,
       status: form.status,
-      questions: form.questions.map((q) => ({
-        text: q.text,
-        type: q.type,
-        options: q.optionsText.split('\n'),
-      })),
+      questions,
     }
     try {
       if (isEdit) await api.updateSurvey(id, payload)
       else await api.createSurvey(payload)
+      await refreshSiteData().catch(() => {})
       navigate('/admin/surveys')
     } catch (err) {
       setError(err.message)
@@ -160,8 +201,11 @@ function SurveyForm({ id }) {
     <div>
       {error ? <div className="admin-alert admin-alert-error">{error}</div> : null}
       <div className="admin-card">
-        <div className="admin-card-header">
+        <div className="admin-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>{isEdit ? 'Edit survey' : 'Add New Survey'}</h3>
+          <Link to="/admin/surveys" className="admin-btn admin-btn-secondary">
+            Back
+          </Link>
         </div>
         <div className="admin-card-body">
           <form onSubmit={onSubmit}>
@@ -174,31 +218,51 @@ function SurveyForm({ id }) {
               <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             {form.questions.map((q, i) => (
-              <div key={i} className="admin-form-group" style={{ borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem' }}>
-                <label>Question {i + 1}</label>
-                <input value={q.text} onChange={(e) => updateQuestion(i, { text: e.target.value })} />
-                <select value={q.type} onChange={(e) => updateQuestion(i, { type: e.target.value })}>
-                  <option value="single">Single choice</option>
-                  <option value="multiple">Multiple choice</option>
-                  <option value="text">Text</option>
+              <div key={i} className="admin-form-group" style={{ borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem', position: 'relative' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ margin: 0, fontWeight: 600 }}>Question {i + 1}</label>
+                  {form.questions.length > 1 ? (
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn-sm admin-btn-danger"
+                      onClick={() => removeQuestion(i)}
+                      style={{ padding: '2px 8px', fontSize: '12px' }}
+                    >
+                      মুছুন
+                    </button>
+                  ) : null}
+                </div>
+                <input
+                  placeholder="প্রশ্নের বিবরণ লিখুন *"
+                  value={q.text}
+                  onChange={(e) => updateQuestion(i, { text: e.target.value })}
+                  style={{ marginBottom: '0.5rem' }}
+                  required
+                />
+                <select value={q.type} onChange={(e) => updateQuestion(i, { type: e.target.value })} style={{ marginBottom: '0.5rem' }}>
+                  <option value="single">Single choice (একটি বাছাই)</option>
+                  <option value="multiple">Multiple choice (একাধিক বাছাই)</option>
+                  <option value="text">Text (লেখা)</option>
                 </select>
                 {q.type !== 'text' ? (
                   <textarea
                     rows={3}
-                    placeholder="Options, one per line"
+                    placeholder="অপশন লিখুন (প্রতি লাইনে একটি)"
                     value={q.optionsText}
                     onChange={(e) => updateQuestion(i, { optionsText: e.target.value })}
                   />
                 ) : null}
               </div>
             ))}
-            <button
-              type="button"
-              className="admin-btn admin-btn-secondary"
-              onClick={() => setForm({ ...form, questions: [...form.questions, { ...emptyQuestion }] })}
-            >
-              Add question
-            </button>
+            <div style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                onClick={() => setForm({ ...form, questions: [...form.questions, { ...emptyQuestion }] })}
+              >
+                + Add question
+              </button>
+            </div>
             <div className="admin-form-row">
               <div className="admin-form-group">
                 <label>Language</label>
@@ -215,9 +279,14 @@ function SurveyForm({ id }) {
                 </select>
               </div>
             </div>
-            <button type="submit" className="admin-btn admin-btn-primary">
-              Save
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+              <button type="submit" className="admin-btn admin-btn-primary">
+                Save
+              </button>
+              <Link to="/admin/surveys" className="admin-btn admin-btn-secondary">
+                Cancel
+              </Link>
+            </div>
           </form>
         </div>
       </div>
@@ -237,7 +306,7 @@ function SurveyResults({ id }) {
     <div>
       {error ? <div className="admin-alert admin-alert-error">{error}</div> : null}
       <div className="admin-card">
-        <div className="admin-card-header">
+        <div className="admin-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>Survey results</h3>
           <Link to="/admin/surveys" className="admin-btn admin-btn-secondary">
             Back
@@ -248,15 +317,31 @@ function SurveyResults({ id }) {
             <p>Loading...</p>
           ) : (
             <>
-              <p>
-                <strong>{data.survey.title}</strong> — {data.responses.length} responses
+              <p style={{ fontSize: '18px', fontWeight: 600 }}>
+                {data.survey.title} — <span style={{ color: '#0284c7' }}>{data.responses.length} responses</span>
               </p>
-              {(data.responses || []).map((row) => (
-                <div key={row._id} className="admin-form-group">
-                  <small>{new Date(row.createdAt).toLocaleString()}</small>
-                  <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{JSON.stringify(row.answers, null, 2)}</pre>
-                </div>
-              ))}
+              {data.survey.description ? <p style={{ color: '#64748b' }}>{data.survey.description}</p> : null}
+              {data.responses.length === 0 ? (
+                <p>এখনো কোনো রেসপন্স আসেনি।</p>
+              ) : (
+                (data.responses || []).map((row, idx) => (
+                  <div key={row._id} className="admin-form-group" style={{ background: '#f8fafc', padding: '1rem', borderRadius: '6px', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <strong>Response #{idx + 1}</strong>
+                      <small style={{ color: '#64748b' }}>{new Date(row.createdAt).toLocaleString()}</small>
+                    </div>
+                    {(data.survey.questions || []).map((q, qi) => {
+                      const ans = row.answers?.[qi]
+                      return (
+                        <div key={qi} style={{ marginBottom: '0.5rem' }}>
+                          <span style={{ fontWeight: 500 }}>{q.text}: </span>
+                          <span style={{ color: '#0f172a' }}>{Array.isArray(ans) ? ans.join(', ') : String(ans ?? '—')}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))
+              )}
             </>
           )}
         </div>
