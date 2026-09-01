@@ -13,6 +13,9 @@ export function setToken(token) {
 async function request(path, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
     ...(options.headers || {}),
   }
   const token = getToken()
@@ -22,6 +25,7 @@ async function request(path, options = {}) {
   const timer = setTimeout(() => ctrl.abort(), 15000)
   try {
     const res = await fetch(`${API_URL}${path}`, {
+      cache: 'no-store',
       ...options,
       headers,
       credentials: 'same-origin',

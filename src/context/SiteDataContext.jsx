@@ -121,6 +121,16 @@ const empty = {
   breakingNews: [],
 }
 
+const SYNC_CHANNEL_NAME = 'kk_news_sync_channel'
+let syncChannel = null
+if (typeof window !== 'undefined' && typeof window.BroadcastChannel === 'function') {
+  try {
+    syncChannel = new BroadcastChannel(SYNC_CHANNEL_NAME)
+  } catch {
+    syncChannel = null
+  }
+}
+
 export function SiteDataProvider({ children }) {
   const cached = typeof window !== 'undefined' ? readCache() : null
   const [data, setData] = useState(() => (cached ? normalize(cached.data) : null))
@@ -130,18 +140,21 @@ export function SiteDataProvider({ children }) {
 
   useEffect(() => {
     let alive = true
+    let lastFetchTime = 0
 
-    async function loadHome() {
+    async function loadHome(forceBust = false) {
+      const now = Date.now()
+      if (!forceBust && now - lastFetchTime < 4000) return
+      lastFetchTime = now
       try {
-        if (!cached) setLoading(true)
-        const home = await api.getHome()
+        if (!cached && !data) setLoading(true)
+        const home = await api.getHome({ bust: Date.now() })
         if (!alive) return
         writeCache(home)
         setData(normalize(home))
         setError('')
 
         const seo = home?.settings?.seo
-        // Defaults applied once; page-level SeoHead overrides per route
         if (seo?.metaTitle && window.location.pathname === '/') {
           document.title = seo.metaTitle
         }
@@ -150,7 +163,7 @@ export function SiteDataProvider({ children }) {
           desc.setAttribute('content', seo.metaDescription)
         }
       } catch (err) {
-        if (alive && !cached) setError(err.message)
+        if (alive && !cached && !data) setError(err.message)
       } finally {
         if (alive) setLoading(false)
       }
@@ -165,21 +178,66 @@ export function SiteDataProvider({ children }) {
       }
     }
 
-    loadHome()
+    // 1. Initial immediate fresh fetch
+    loadHome(true)
     const t = setTimeout(loadSubs, 50)
 
+    // 2. Global refresh function (for Admin and manual triggers)
     siteRefreshFn = async () => {
       clearHomeCache()
-      const home = await api.getHome({ bust: Date.now() })
-      writeCache(home)
-      setData(normalize(home))
-      const subcategories = await api.getSubcategories().catch(() => [])
-      setSubs(subcategories || [])
+      await loadHome(true)
+      await loadSubs()
+      try {
+        if (syncChannel) syncChannel.postMessage({ type: 'REFRESH', at: Date.now() })
+        localStorage.setItem('kk_last_sync_trigger', String(Date.now()))
+      } catch {
+        /* ignore */
+      }
     }
+
+    // 3. Listen for sync broadcasts across tabs/windows
+    function handleSyncMessage(event) {
+      if (event?.data?.type === 'REFRESH') {
+        loadHome(true)
+        loadSubs()
+      }
+    }
+    if (syncChannel) {
+      syncChannel.addEventListener('message', handleSyncMessage)
+    }
+
+    // 4. Storage event fallback for cross-tab sync
+    function handleStorageEvent(e) {
+      if (e.key === 'kk_last_sync_trigger' || e.key === CACHE_KEY) {
+        loadHome(true)
+      }
+    }
+    window.addEventListener('storage', handleStorageEvent)
+
+    // 5. Visibility / Window Focus revalidation (e.g. user returns to browser/mobile)
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        loadHome(false)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleVisibilityChange)
+
+    // 6. Periodic background sync every 30 seconds
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadHome(false)
+      }
+    }, 30000)
 
     return () => {
       alive = false
       clearTimeout(t)
+      clearInterval(interval)
+      if (syncChannel) syncChannel.removeEventListener('message', handleSyncMessage)
+      window.removeEventListener('storage', handleStorageEvent)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleVisibilityChange)
       if (siteRefreshFn) siteRefreshFn = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, articlePath } from '../../api/client'
+import { refreshSiteData } from '../../context/SiteDataContext'
 import SafeImage from '../../components/SafeImage'
 
 function isoDate(value) {
@@ -180,6 +181,7 @@ export default function PostsListPage() {
       await api.deleteArticle(id)
       setMessage('পোস্ট মুছে ফেলা হয়েছে')
       await load()
+      await refreshSiteData().catch(() => {})
     } catch (err) {
       setError(err.message)
     }

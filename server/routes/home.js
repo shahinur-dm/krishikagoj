@@ -16,7 +16,7 @@ import Opinion from '../models/Opinion.js'
 
 const router = Router()
 const CACHE_KEY = 'home:v41'
-const CACHE_TTL = 180_000
+const CACHE_TTL = 5_000
 
 const SLIM =
   'title titleEn slug excerpt excerptEn image author views featured headline latest popular bigthumbnail publishedAt category subcategory'
@@ -200,10 +200,14 @@ function slimSettings(s) {
 
 router.get('/', async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    res.set('Pragma', 'no-cache')
+    res.set('Expires', '0')
+    res.set('Surrogate-Control', 'no-store')
+
     const bust = Boolean(req.query.bust)
     const cached = bust ? null : cacheGet(CACHE_KEY)
     if (cached) {
-      res.set('Cache-Control', 'public, max-age=10, s-maxage=30, stale-while-revalidate=60')
       res.set('X-Cache', 'HIT')
       return res.json(cached)
     }

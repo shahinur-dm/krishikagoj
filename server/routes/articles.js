@@ -90,8 +90,10 @@ function canEditArticle(user, article) {
 }
 
 function bustCaches() {
-  cacheDel('home:')
-  cacheDel('articles:')
+  cacheDel('home')
+  cacheDel('articles')
+  cacheDel('categories')
+  cacheDel('catslug')
 }
 
 function populateArticle(q) {
@@ -103,6 +105,11 @@ function populateArticle(q) {
 
 router.get('/', async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    res.set('Pragma', 'no-cache')
+    res.set('Expires', '0')
+    res.set('Surrogate-Control', 'no-store')
+
     const {
       category,
       subcategory,
@@ -262,7 +269,10 @@ router.get('/:idOrSlug', async (req, res) => {
       Article.updateOne({ _id: article._id }, { $inc: { views: 1 } }).exec().catch(() => {})
     }
 
-    res.set('Cache-Control', 'public, max-age=15')
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    res.set('Pragma', 'no-cache')
+    res.set('Expires', '0')
+    res.set('Surrogate-Control', 'no-store')
     res.json({ ...article, views: (article.views || 0) + 1 })
   } catch (err) {
     res.status(500).json({ message: err.message })
