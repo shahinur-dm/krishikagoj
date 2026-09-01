@@ -314,7 +314,8 @@ function CategoryMotamot({ title, slug, articles = [], embedded = false }) {
   const { text } = useLang()
   const { staff = [], opinions = [] } = useSiteData()
   
-  const opinionItems = (opinions || []).map((o) => ({
+  // Show strictly published opinions from Admin Panel / database
+  const items = (opinions || []).map((o) => ({
     id: o._id,
     title: o.title,
     author: o.name,
@@ -322,15 +323,8 @@ function CategoryMotamot({ title, slug, articles = [], embedded = false }) {
     date: formatBnDate(o.createdAt),
     path: `/news/${o._id}`,
     subcategoryName: 'মতামত',
-  }))
+  })).slice(0, 4)
 
-  const combined = [...opinionItems, ...(articles || [])]
-  const seen = new Set()
-  const items = combined.filter((item) => {
-    if (!item?.id || seen.has(item.id)) return false
-    seen.add(item.id)
-    return true
-  }).slice(0, 4)
   if (!items.length) return null
 
   const list = (
@@ -578,7 +572,7 @@ function CategorySpotlight({
   sideCategory = null,
 }) {
   const { text } = useLang()
-  const { ads } = useSiteData()
+  const { ads, opinions = [] } = useSiteData()
   const featured = articles[0]
   const thumbList = articles.slice(1, 4)
   const arrowList = articles.slice(4, 7)
@@ -586,11 +580,11 @@ function CategorySpotlight({
   const featuredTitle = text(featured.title, featured.titleEn)
   const featuredExcerpt = text(featured.excerpt, featured.excerptEn)
   const companionAside =
-    companion?.articles?.length ? (
+    companion || opinions.length ? (
       <CategoryMotamot
-        title={companion.title}
-        slug={companion.slug}
-        articles={companion.articles}
+        title={companion?.title || 'মতামত'}
+        slug={companion?.slug || 'motamot'}
+        articles={companion?.articles || []}
         embedded
       />
     ) : null
