@@ -15,16 +15,37 @@ import BreakingNews from '../models/BreakingNews.js'
 import Opinion from '../models/Opinion.js'
 
 const router = Router()
-const CACHE_KEY = 'home:v41'
+const CACHE_KEY = 'home:v42'
 const CACHE_TTL = 5_000
 
 const SLIM =
   'title titleEn slug excerpt excerptEn body bodyEn image author views featured headline latest popular bigthumbnail publishedAt category subcategory'
 
-function extractText(htmlOrText, maxLen = 600) {
+function extractText(htmlOrText, maxLen = 800) {
   if (!htmlOrText) return ''
-  const clean = String(htmlOrText).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const clean = String(htmlOrText)
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
   return clean.slice(0, maxLen)
+}
+
+function getFullDescription(excerpt, body, maxLen = 700) {
+  const cleanExcerpt = extractText(excerpt, maxLen)
+  const cleanBody = extractText(body, maxLen)
+  if (!cleanExcerpt && !cleanBody) return ''
+  if (!cleanBody) return cleanExcerpt
+  if (!cleanExcerpt) return cleanBody
+  if (cleanBody.startsWith(cleanExcerpt) || cleanBody.includes(cleanExcerpt)) {
+    return cleanBody
+  }
+  return `${cleanExcerpt} ${cleanBody}`.slice(0, maxLen)
 }
 
 function thumb(url, w = 480) {
@@ -50,8 +71,8 @@ function ytThumb(embed) {
 
 function slimArticle(a, imageW = 480) {
   if (!a) return a
-  const rawBn = a.excerpt && a.excerpt.trim().length > 30 ? a.excerpt.trim() : (a.body ? extractText(a.body, 600) : (a.excerpt || ''))
-  const rawEn = a.excerptEn && a.excerptEn.trim().length > 30 ? a.excerptEn.trim() : (a.bodyEn ? extractText(a.bodyEn, 600) : (a.excerptEn || ''))
+  const rawBn = getFullDescription(a.excerpt, a.body, 700)
+  const rawEn = getFullDescription(a.excerptEn, a.bodyEn, 700)
   return {
     _id: a._id,
     title: a.title,

@@ -3,7 +3,7 @@ import { api, mapArticle } from '../api/client'
 
 const SiteDataContext = createContext(null)
 export { SiteDataContext }
-const CACHE_KEY = 'kk_home_cache_v41'
+const CACHE_KEY = 'kk_home_cache_v42'
 
 function clearHomeCache() {
   try {
