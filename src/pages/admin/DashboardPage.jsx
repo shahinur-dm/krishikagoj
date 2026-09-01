@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, formatBnDate } from '../../api/client'
 import SafeImage from '../../components/SafeImage'
-import ImageUploadField from '../../components/admin/ImageUploadField'
 import { useAuth } from '../../context/AuthContext'
 import { useLang } from '../../context/LanguageContext'
-import { refreshSiteData, useSiteData } from '../../context/SiteDataContext'
 
 function can(user, perm) {
   if (!user) return false
@@ -25,13 +23,8 @@ function fmt(n, isEn) {
 export default function DashboardPage() {
   const { user } = useAuth()
   const { t, isEn } = useLang()
-  const { settings } = useSiteData()
   const [stats, setStats] = useState(null)
   const [error, setError] = useState('')
-  const [logo, setLogo] = useState('')
-  const [logoMsg, setLogoMsg] = useState('')
-  const [logoErr, setLogoErr] = useState('')
-  const [logoSaving, setLogoSaving] = useState(false)
 
   useEffect(() => {
     api
@@ -94,56 +87,8 @@ export default function DashboardPage() {
     { label: t.websites, value: stats.websites, to: '/admin/important-websites', icon: 'fa-solid fa-link' },
   ]
 
-  const currentLogo = logo || settings?.logo || '/logo.png'
-  const canLogo = can(user, 'setting')
-
-  async function saveLogo(nextUrl) {
-    setLogo(nextUrl)
-    setLogoErr('')
-    setLogoMsg('')
-    setLogoSaving(true)
-    try {
-      await api.updateSettings({ logo: nextUrl || '/logo.png' })
-      await refreshSiteData().catch(() => {})
-      setLogoMsg(isEn ? 'Logo updated' : 'লোগো আপডেট হয়েছে')
-      setTimeout(() => setLogoMsg(''), 2500)
-    } catch (err) {
-      setLogoErr(err.message)
-    } finally {
-      setLogoSaving(false)
-    }
-  }
-
   return (
     <div className="dash">
-      {canLogo ? (
-        <section className="dash-logo-card">
-          <div className="dash-logo-preview">
-            <span className="dash-logo-kicker">{isEn ? 'Site logo' : 'সাইট লোগো'}</span>
-            <div className="dash-logo-frame">
-              <SafeImage src={currentLogo} alt="কৃষিকাগজ" />
-            </div>
-          </div>
-          <div className="dash-logo-actions">
-            <h3>{isEn ? 'Upload / change logo' : 'লোগো আপলোড / পরিবর্তন'}</h3>
-            <p>
-              {isEn
-                ? 'This uses the existing website logo setting. The public site will show the saved logo.'
-                : 'বিদ্যমান ওয়েবসাইট লোগো সেটিং ব্যবহার করা হয়। সংরক্ষণের পর পাবলিক সাইটে দেখাবে।'}
-            </p>
-            {logoMsg ? <div className="admin-alert admin-alert-success">{logoMsg}</div> : null}
-            {logoErr ? <div className="admin-alert admin-alert-error">{logoErr}</div> : null}
-            <ImageUploadField
-              label={isEn ? 'Logo image' : 'লোগো ছবি'}
-              value={currentLogo === '/logo.png' && !logo ? settings?.logo || '' : currentLogo}
-              onChange={saveLogo}
-              libraryPicker
-              hint={logoSaving ? (isEn ? 'Saving…' : 'সংরক্ষণ হচ্ছে...') : undefined}
-            />
-          </div>
-        </section>
-      ) : null}
-
       <section className="dash-hero">
         <div>
           <p className="dash-hero-greet">

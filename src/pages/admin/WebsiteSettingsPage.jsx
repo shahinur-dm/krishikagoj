@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { SettingsShell, useSettings } from './settingsShared'
 import ImageUploadField from '../../components/admin/ImageUploadField'
+import SafeImage from '../../components/SafeImage'
+import { refreshSiteData } from '../../context/SiteDataContext'
 
 export default function WebsiteSettingsPage() {
   const { settings, loading, error, save, updateField } = useSettings()
@@ -38,6 +40,7 @@ export default function WebsiteSettingsPage() {
         facebookPage: settings.facebookPage,
         themeColor: settings.themeColor,
       })
+      await refreshSiteData().catch(() => {})
       setMessage('সেটিংস সংরক্ষণ হয়েছে')
       setTimeout(() => setMessage(''), 2500)
     } catch (err) {
@@ -83,13 +86,31 @@ export default function WebsiteSettingsPage() {
           style={{ width: '100px', height: '40px', padding: '0', cursor: 'pointer' }}
         />
       </div>
-      <p style={{ fontWeight: 600, marginTop: '0.5rem' }}>ব্র্যান্ড ছবি (আপলোড)</p>
+
+      {/* Logo Settings / লোগো সেটিং */}
+      <div className="dash-logo-card" style={{ marginTop: '1.25rem', marginBottom: '1.25rem' }}>
+        <div className="dash-logo-preview">
+          <span className="dash-logo-kicker">সাইট লোগো</span>
+          <div className="dash-logo-frame">
+            <SafeImage src={settings.logo || '/logo.png'} alt="কৃষিকাগজ" />
+          </div>
+        </div>
+        <div className="dash-logo-actions">
+          <h3>লোগো সেটিং (Logo Settings)</h3>
+          <p>
+            বিদ্যমান ওয়েবসাইট লোগো সেটিং ব্যবহার করা হয়। সংরক্ষণের পর পাবলিক সাইটে দেখাবে।
+          </p>
+          <ImageUploadField
+            label="লোগো ছবি (Logo image)"
+            value={settings.logo || ''}
+            onChange={(url) => updateField('logo', url)}
+            libraryPicker
+          />
+        </div>
+      </div>
+
+      <p style={{ fontWeight: 600, marginTop: '1rem' }}>অন্যান্য ব্র্যান্ড ছবি (আপলোড)</p>
       <div className="admin-form-row">
-        <ImageUploadField
-          label="লোগো"
-          value={settings.logo || ''}
-          onChange={(url) => updateField('logo', url)}
-        />
         <ImageUploadField
           label="মোবাইল লোগো"
           value={settings.mobileLogo || ''}

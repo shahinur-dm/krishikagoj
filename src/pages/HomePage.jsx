@@ -43,7 +43,11 @@ function getSidebarForSection(cat, categoryBlocks, sectionSidebars) {
   if (!targetSlug) return null
 
   const targetBlock = categoryBlocks.find(
-    (b) => b.cat.slug === targetSlug || (targetSlug === 'projukti' && usesProjuktiLayout(b.cat)),
+    (b) =>
+      b.cat.slug === targetSlug ||
+      b.cat.name === targetSlug ||
+      String(b.cat._id) === targetSlug ||
+      (targetSlug === 'projukti' && usesProjuktiLayout(b.cat)),
   )
   if (!targetBlock || !targetBlock.articles?.length) return null
 
