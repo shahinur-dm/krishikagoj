@@ -106,7 +106,7 @@ router.put('/', requireAuth, requirePermission('setting', 'ads', 'breaking', 'po
       { new: true, upsert: true, runValidators: true },
     ).lean()
     cacheDel('settings')
-    cacheDel('home:')
+    cacheDel('home')
     res.json(settings)
   } catch (err) {
     res.status(400).json({ message: err.message })

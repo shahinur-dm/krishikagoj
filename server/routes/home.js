@@ -262,7 +262,7 @@ router.get('/', async (req, res) => {
         .lean(),
       SiteSetting.findOne({ key: 'site' })
         .select(
-          'siteName tagline hotline notice logo favicon email phoneBn addressBn aboutUs facebookPage liveTvLink liveTvEmbed chiefAdvisor publisher managingEditor social namaz seo themeColor homepageLayout homepageSlots sectionSlots sectionSidebars discussedConfig adsEnabled topicGridLimit topicGridSlug',
+          'siteName tagline hotline notice logo favicon email phoneBn addressBn addressEn phoneEn aboutUs facebookPage liveTvLink liveTvEmbed chiefAdvisor publisher managingEditor social namaz seo themeColor homepageLayout homepageSlots sectionSlots sectionSidebars discussedConfig adsEnabled topicGridLimit topicGridSlug breakingTitle breakingTitleBn breakingTitleEn',
         )
         .lean(),
       ImportantWebsite.find({ isActive: { $ne: false } })

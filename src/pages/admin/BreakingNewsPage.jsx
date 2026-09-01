@@ -52,15 +52,22 @@ export default function BreakingNewsPage() {
     setError('')
     setSavingHeading(true)
     try {
-      await api.updateSettings({
+      const updated = await api.updateSettings({
         breakingTitle: headingForm.breakingTitle,
         breakingTitleBn: headingForm.breakingTitle,
         breakingTitleEn: headingForm.breakingTitleEn,
       })
-      flash(isEn ? 'Heading updated' : 'শিরোনাম আপডেট হয়েছে')
-      refreshSiteData().catch(() => {})
+      if (updated) {
+        setHeadingForm({
+          breakingTitle: updated.breakingTitle || updated.breakingTitleBn || '',
+          breakingTitleEn: updated.breakingTitleEn || '',
+        })
+      }
+      flash(isEn ? 'Section heading saved successfully' : 'শিরোনাম সফলভাবে সংরক্ষিত হয়েছে')
+      await refreshSiteData().catch(() => {})
     } catch (err) {
-      setError(err.message)
+      console.error('Failed to save heading:', err)
+      setError(err?.message || (isEn ? 'Failed to save heading' : 'শিরোনাম সংরক্ষণ ব্যর্থ হয়েছে'))
     } finally {
       setSavingHeading(false)
     }
