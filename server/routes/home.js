@@ -19,7 +19,13 @@ const CACHE_KEY = 'home:v41'
 const CACHE_TTL = 5_000
 
 const SLIM =
-  'title titleEn slug excerpt excerptEn image author views featured headline latest popular bigthumbnail publishedAt category subcategory'
+  'title titleEn slug excerpt excerptEn body bodyEn image author views featured headline latest popular bigthumbnail publishedAt category subcategory'
+
+function extractText(htmlOrText, maxLen = 600) {
+  if (!htmlOrText) return ''
+  const clean = String(htmlOrText).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  return clean.slice(0, maxLen)
+}
 
 function thumb(url, w = 480) {
   if (!url || typeof url !== 'string') return url || ''
@@ -44,13 +50,15 @@ function ytThumb(embed) {
 
 function slimArticle(a, imageW = 480) {
   if (!a) return a
+  const rawBn = a.excerpt && a.excerpt.trim().length > 30 ? a.excerpt.trim() : (a.body ? extractText(a.body, 600) : (a.excerpt || ''))
+  const rawEn = a.excerptEn && a.excerptEn.trim().length > 30 ? a.excerptEn.trim() : (a.bodyEn ? extractText(a.bodyEn, 600) : (a.excerptEn || ''))
   return {
     _id: a._id,
     title: a.title,
     titleEn: a.titleEn || '',
     slug: a.slug,
-    excerpt: (a.excerpt || '').slice(0, 100),
-    excerptEn: (a.excerptEn || '').slice(0, 100),
+    excerpt: rawBn,
+    excerptEn: rawEn,
     image: thumb(a.image, imageW),
     author: a.author,
     views: a.views || 0,

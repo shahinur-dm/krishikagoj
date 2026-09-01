@@ -1905,6 +1905,19 @@ section[class*='home-layout-'] .img-zoom-hover img {
 
 .home-layout-hero-grid .home-hero-featured {
   border-right: 1px solid #e2e2e2;
+  padding-right: 16px;
+}
+
+.home-layout-hero-grid .home-hero-featured .featured-subtitle {
+  font-size: 14.5px !important;
+  line-height: 1.62 !important;
+  color: #4b5563 !important;
+  margin-bottom: 10px !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 7 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-align: justify;
 }
 
 /* কৃষকের কথা featured only: keep image inside its column, do not change other cards */
@@ -7428,6 +7441,11 @@ main,
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
+    border-right: 0 !important;
+  }
+
+  .home-layout-hero-grid .home-hero-featured .featured-subtitle {
+    -webkit-line-clamp: 3 !important;
   }
 
   .home-layout-hero-grid .home-hero-mini-grid {
