@@ -1750,7 +1750,7 @@ section[class*='home-layout-'] .img-zoom-hover img {
 .home-split-featured .news-list {
   border-bottom: 0;
   padding-top: 0;
-  flex: 1;
+  height: auto;
   display: flex;
   flex-direction: column;
 }
@@ -1758,8 +1758,11 @@ section[class*='home-layout-'] .img-zoom-hover img {
 .home-spotlight-featured .img-zoom-hover,
 .home-hero-featured .img-zoom-hover,
 .home-split-featured .img-zoom-hover {
-  flex: 1;
-  min-height: 220px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 0;
+  flex: none;
 }
 
 .home-spotlight-featured .img-zoom-hover img,
@@ -4942,23 +4945,52 @@ section[class*='home-layout-'] .img-zoom-hover img {
 }
 
 /* Category + sidebar: content-based height, no stretched empty area */
+/* Category + sidebar: content-based height, no stretched empty area */
 @media (min-width: 992px) {
-  .cat-section-with-ad > .container > .row {
-    align-items: flex-start;
+  .cat-section-with-ad > .container > .row,
+  .home-layout-spotlight > .container > .row,
+  .home-layout-hero-grid > .container > .row,
+  .home-layout-livestock > .container > .row,
+  .home-layout-admin-rows > .container > .row,
+  .home-layout-proshason > .container > .row,
+  .home-layout-projukti > .container > .row,
+  .home-layout-binodon > .container > .row {
+    align-items: flex-start !important;
   }
 
   .cat-section-with-ad > .container > .row > .col-lg-9,
-  .cat-section-with-ad > .container > .row > .col-lg-3 {
+  .cat-section-with-ad > .container > .row > .col-lg-3,
+  .home-layout-spotlight .col-lg-9,
+  .home-layout-spotlight .col-lg-3,
+  .home-layout-hero-grid .col-lg-9,
+  .home-layout-hero-grid .col-lg-3,
+  .home-layout-livestock .col-lg-9,
+  .home-layout-livestock .col-lg-3,
+  .home-layout-livestock .livestock-poll-col {
     display: block;
-    height: auto;
-    min-height: 0;
-    align-self: flex-start;
+    height: auto !important;
+    min-height: 0 !important;
+    align-self: flex-start !important;
   }
 
-  .cat-section-with-ad > .container > .row > .col-lg-9 > .common-border-box {
+  .cat-section-with-ad .common-border-box,
+  .home-layout-spotlight .common-border-box,
+  .home-layout-hero-grid .common-border-box,
+  .home-layout-livestock .common-border-box,
+  .home-layout-proshason .common-border-box,
+  .home-layout-projukti .common-border-box,
+  .home-layout-binodon .common-border-box {
     height: auto !important;
-    min-height: 0;
+    min-height: 0 !important;
     flex: none;
+  }
+
+  /* Empty ad slots should collapse completely */
+  .cat-side-ad:empty {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
   }
 
   .cat-section-with-ad .cat-side-ad,
@@ -4966,8 +4998,8 @@ section[class*='home-layout-'] .img-zoom-hover img {
   .cat-section-with-ad .sidebar > .common-border-box,
   .cat-section-with-ad .sidebar .scroll-height-area.scroll-height-compact {
     flex: none;
-    height: auto;
-    min-height: 0;
+    height: auto !important;
+    min-height: 0 !important;
     max-height: none;
     overflow: visible;
   }
@@ -4975,6 +5007,72 @@ section[class*='home-layout-'] .img-zoom-hover img {
   .cat-section-with-ad .sidebar > .common-border-box {
     margin-bottom: 0;
     display: block;
+  }
+
+  .cat-section-with-ad .sidebar .scroll-height-compact .news-list {
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 8px 0 !important;
+  }
+
+  /* 1. ফসল / Spotlight: Even distribution of thumbs & arrows */
+  .home-layout-spotlight .home-spotlight-inner {
+    align-items: stretch !important;
+  }
+
+  .home-layout-spotlight .home-spotlight-thumbs,
+  .home-layout-spotlight .home-spotlight-arrows {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    height: 100% !important;
+  }
+
+  .home-layout-spotlight .home-spotlight-thumbs .news-list,
+  .home-layout-spotlight .home-spotlight-arrows .news-list-arrow {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6px 0;
+  }
+
+  /* 2. কৃষি প্রশাসন / প্রযুক্তি / বিনোদন: 3-column height balance */
+  .home-layout-proshason .binodon-inner,
+  .home-layout-projukti .binodon-inner,
+  .home-layout-binodon .binodon-inner {
+    align-items: stretch !important;
+  }
+
+  .home-layout-proshason .binodon-side,
+  .home-layout-projukti .binodon-side,
+  .home-layout-binodon .binodon-side {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    height: 100% !important;
+  }
+
+  .home-layout-proshason .binodon-side .binodon-item,
+  .home-layout-projukti .binodon-side .binodon-item,
+  .home-layout-binodon .binodon-side .binodon-item {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 0;
+  }
+
+  /* 3. প্রাণিসম্পদ / Livestock Poll */
+  .home-layout-livestock .livestock-poll {
+    height: auto !important;
+    min-height: 0 !important;
+    align-self: flex-start !important;
+  }
+
+  /* 4. কৃষকের কথা / Hero Grid */
+  .home-layout-hero-grid .home-hero-mini-grid .news-sm .title {
+    min-height: 0 !important;
   }
 }
 
