@@ -4,7 +4,7 @@ import SafeImage from './SafeImage'
 import Sidebar from './Sidebar'
 import AdSlider from './AdSlider'
 import { useSiteData } from '../context/SiteDataContext'
-import { api } from '../api/client'
+import { api, formatBnDate } from '../api/client'
 import { useLang } from '../context/LanguageContext'
 
 const BN_NUM = ['১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯', '১০', '১১', '১২']
