@@ -11,6 +11,7 @@ import CategorySection, {
   usesUddoktaHeroLayout,
   usesKrishokerKothaLayout,
   usesShikkhaLayout,
+  usesSafolloLayout,
 } from '../components/CategorySection'
 import VideoGallerySection, { PhotoGallerySection } from '../components/VideoGallerySection'
 import SeoHead from '../components/SeoHead'
@@ -221,6 +222,8 @@ export default function HomePage() {
                 ? 'projukti'
                 : usesUddoktaHeroLayout(cat) || usesKrishokerKothaLayout(cat)
                 ? 'heroGridSidebar'
+                : usesSafolloLayout(cat)
+                ? 'heroGrid'
                 : usesBinodonLayout(cat)
                 ? 'binodon'
                 : HOME_LAYOUT_CYCLE[index % HOME_LAYOUT_CYCLE.length]

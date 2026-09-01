@@ -1641,6 +1641,12 @@ export function usesShikkhaLayout(cat) {
   return String(cat.name || '').includes('কৃষি শিক্ষা')
 }
 
+export function usesSafolloLayout(cat) {
+  if (!cat) return false
+  if (cat.slug === 'safollo') return true
+  return String(cat.name || '').includes('সাফল্য')
+}
+
 export default function CategorySection({
   title,
   slug,
