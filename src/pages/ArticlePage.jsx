@@ -189,6 +189,7 @@ function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT,
   const url = typeof window !== 'undefined' ? `${window.location.origin}${article.path}` : ''
   const gallery = article.raw?.images || []
   const title = text(article.title, article.titleEn)
+  const shortHeadline = text(article.excerpt, article.excerptEn)?.trim()
   const authorName = String(article.author || article.raw?.authorUser?.name || '').trim()
   const hasUploadedImage = Boolean(String(article.image || '').trim())
   const showImageInDetails = article.showImageInDetails !== false
@@ -224,6 +225,7 @@ function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT,
                   </>
                 )}
               </ul>
+              {shortHeadline ? <h2 className="post-short-title">{shortHeadline}</h2> : null}
               <h1 className="post-title">{title}</h1>
 
               <PostMeta article={article} authorName={authorName} />
@@ -235,12 +237,6 @@ function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT,
                   <SafeImage src={detailsImage} alt={title} width={900} priority={isFirst} />
                 </figure>
               ) : null}
-
-              {article.excerpt && (
-                <div className="post-subtitle">
-                  <strong>{text(article.excerpt, article.excerptEn)}</strong>
-                </div>
-              )}
 
               {isEn && !article.bodyEn && <p className="kk-lang-note">{t.noEnglish}</p>}
 

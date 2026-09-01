@@ -8,8 +8,8 @@ const HOLD_MS = 4000
 const SLIDE_MS = 600
 
 export default function Ticker() {
-  const { headlines, latest, breakingNews } = useSiteData()
-  const { t, text } = useLang()
+  const { headlines, latest, breakingNews, settings } = useSiteData()
+  const { t, text, isEn } = useLang()
   const managed = (breakingNews || []).filter((b) => b.titleBn || b.titleEn)
   const fallback = (headlines.length ? headlines : latest).slice(0, 10)
   const items = managed.length
@@ -23,6 +23,11 @@ export default function Ticker() {
   const [index, setIndex] = useState(0)
   const [sliding, setSliding] = useState(true)
   const [paused, setPaused] = useState(false)
+
+  const customTitle = isEn
+    ? (settings?.breakingTitleEn || settings?.breakingTitle || settings?.breakingTitleBn)
+    : (settings?.breakingTitle || settings?.breakingTitleBn)
+  const label = (customTitle && String(customTitle).trim()) || t.breakingNews
 
   useEffect(() => {
     if (!count || paused) return
@@ -59,7 +64,7 @@ export default function Ticker() {
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
             <path d="M5.52.359A.5.5 0 0 1 6 0h4a.5.5 0 0 1 .474.658L8.694 6H12.5a.5.5 0 0 1 .395.807l-7 9a.5.5 0 0 1-.873-.454L6.823 9.5H3.5a.5.5 0 0 1-.48-.641l2.5-8.5z" />
           </svg>
-          <span>{t.breakingNews}</span>
+          <span>{label}</span>
         </div>
         <div className="breaking-track">
           <div

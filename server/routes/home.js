@@ -149,6 +149,9 @@ function slimSettings(s) {
   if (!s) return null
   return {
     siteName: s.siteName,
+    breakingTitle: s.breakingTitle || s.breakingTitleBn || '',
+    breakingTitleBn: s.breakingTitleBn || s.breakingTitle || '',
+    breakingTitleEn: s.breakingTitleEn || '',
     homepageLayout: s.homepageLayout,
     homepageSlots: s.homepageSlots || null,
     sectionSlots: s.sectionSlots || {},

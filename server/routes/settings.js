@@ -95,7 +95,7 @@ router.put('/login-logo', requireAuth, requireSuperAdmin, async (req, res) => {
   }
 })
 
-router.put('/', requireAuth, requirePermission('setting', 'ads'), async (req, res) => {
+router.put('/', requireAuth, requirePermission('setting', 'ads', 'breaking', 'post'), async (req, res) => {
   try {
     const update = { ...req.body }
     delete update.loginLogo

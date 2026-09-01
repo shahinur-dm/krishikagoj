@@ -12,6 +12,9 @@ const siteSettingSchema = new mongoose.Schema(
     mobileLogo: { type: String, default: '' },
     favicon: { type: String, default: '/logo.png' },
     defaultNewsImage: { type: String, default: '/placeholder-news.svg' },
+    breakingTitle: { type: String, default: 'ব্রেকিং নিউজ' },
+    breakingTitleBn: { type: String, default: 'ব্রেকিং নিউজ' },
+    breakingTitleEn: { type: String, default: 'Breaking News' },
     homepageLayout: { type: String, default: 'dynamic' },
     homepageSlots: {
       lead: { type: String, default: '' },

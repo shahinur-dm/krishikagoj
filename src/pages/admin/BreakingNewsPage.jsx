@@ -16,11 +16,26 @@ export default function BreakingNewsPage() {
   const [items, setItems] = useState([])
   const [form, setForm] = useState(empty)
   const [editingId, setEditingId] = useState(null)
+  const [headingForm, setHeadingForm] = useState({
+    breakingTitle: '',
+    breakingTitleEn: '',
+  })
+  const [savingHeading, setSavingHeading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
   async function load() {
-    setItems(await api.getBreaking())
+    const [breakingData, settingsData] = await Promise.all([
+      api.getBreaking(),
+      api.getSettings().catch(() => ({})),
+    ])
+    setItems(breakingData || [])
+    if (settingsData) {
+      setHeadingForm({
+        breakingTitle: settingsData.breakingTitle || settingsData.breakingTitleBn || '',
+        breakingTitleEn: settingsData.breakingTitleEn || '',
+      })
+    }
   }
 
   useEffect(() => {
@@ -30,6 +45,25 @@ export default function BreakingNewsPage() {
   function flash(msg) {
     setMessage(msg)
     setTimeout(() => setMessage(''), 2500)
+  }
+
+  async function handleHeadingSubmit(e) {
+    e.preventDefault()
+    setError('')
+    setSavingHeading(true)
+    try {
+      await api.updateSettings({
+        breakingTitle: headingForm.breakingTitle,
+        breakingTitleBn: headingForm.breakingTitle,
+        breakingTitleEn: headingForm.breakingTitleEn,
+      })
+      flash(isEn ? 'Heading updated' : 'শিরোনাম আপডেট হয়েছে')
+      refreshSiteData().catch(() => {})
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingHeading(false)
+    }
   }
 
   async function handleSubmit(e) {
@@ -81,7 +115,48 @@ export default function BreakingNewsPage() {
 
       <div className="admin-card">
         <div className="admin-card-header">
-          <h3>{editingId ? (isEn ? 'Edit breaking news' : 'ব্রেকিং নিউজ সম্পাদনা') : t.navBreaking}</h3>
+          <h3>{isEn ? 'Section Heading' : 'সেকশন শিরোনাম'}</h3>
+        </div>
+        <div className="admin-card-body">
+          <form onSubmit={handleHeadingSubmit}>
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label>{isEn ? 'Heading (Bangla)' : 'শিরোনাম (বাংলা)'}</label>
+                <input
+                  value={headingForm.breakingTitle}
+                  onChange={(e) =>
+                    setHeadingForm({ ...headingForm, breakingTitle: e.target.value })
+                  }
+                  placeholder="ব্রেকিং নিউজ"
+                />
+              </div>
+              <div className="admin-form-group">
+                <label>{isEn ? 'Heading (English)' : 'শিরোনাম (ইংরেজি)'}</label>
+                <input
+                  value={headingForm.breakingTitleEn}
+                  onChange={(e) =>
+                    setHeadingForm({ ...headingForm, breakingTitleEn: e.target.value })
+                  }
+                  placeholder="Breaking News"
+                />
+              </div>
+            </div>
+            <button type="submit" className="admin-btn admin-btn-primary" disabled={savingHeading}>
+              {savingHeading
+                ? (isEn ? 'Saving...' : 'সংরক্ষণ হচ্ছে...')
+                : (isEn ? 'Save Heading' : 'শিরোনাম সংরক্ষণ')}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <h3>
+            {editingId
+              ? (isEn ? 'Edit breaking news' : 'খবর সম্পাদনা')
+              : (headingForm.breakingTitle || t.navBreaking)}
+          </h3>
         </div>
         <div className="admin-card-body">
           <form onSubmit={handleSubmit}>
@@ -154,7 +229,7 @@ export default function BreakingNewsPage() {
       <div className="admin-card">
         <div className="admin-card-header">
           <h3>
-            {t.navBreaking} ({items.length})
+            {(headingForm.breakingTitle || t.navBreaking)} ({items.length})
           </h3>
         </div>
         <div className="admin-card-body admin-table-wrap">
