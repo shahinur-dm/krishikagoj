@@ -4335,9 +4335,9 @@ section[class*='home-layout-'] .img-zoom-hover img {
 }
 
 .post-short-title {
-  margin: 0 0 8px;
-  font-size: 21px;
-  line-height: 1.36;
+  margin: 0 0 6px;
+  font-size: 18px;
+  line-height: 1.4;
   font-weight: 700;
   letter-spacing: 0;
   color: #1f2937;
@@ -6217,9 +6217,9 @@ main,
   }
 
   .post-short-title {
-    font-size: 18px !important;
-    line-height: 26px !important;
-    margin-bottom: 6px;
+    font-size: 16px !important;
+    line-height: 24px !important;
+    margin-bottom: 5px;
   }
 
   .kk-article-page .kk-post-content .entry-content p,
@@ -6787,9 +6787,9 @@ main,
   }
 
   .post-short-title {
-    font-size: 17px !important;
-    line-height: 24px !important;
-    margin-bottom: 6px;
+    font-size: 15px !important;
+    line-height: 22px !important;
+    margin-bottom: 5px;
   }
 
   .eb-sec-head h1 {
