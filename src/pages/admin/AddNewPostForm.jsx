@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { api } from '../../api/client'
 import SafeImage from '../../components/SafeImage'
-import ImageUploadField from '../../components/admin/ImageUploadField'
+import MediaPickerDialog from '../../components/admin/MediaPickerDialog'
 import AddPostCkeditor from './AddPostCkeditor'
 
 const SLUG_BAD = /[,.@$]/
@@ -28,6 +28,8 @@ export default function AddNewPostForm({
   const [writerOpen, setWriterOpen] = useState(false)
   const [writerSaving, setWriterSaving] = useState(false)
   const [writerForm, setWriterForm] = useState({ name: '', email: '', password: '' })
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const slugInvalid = Boolean(form.customUrl && SLUG_BAD.test(form.customUrl))
   const fileRef = useRef(null)
 
@@ -102,11 +104,15 @@ export default function AddNewPostForm({
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
+    setError('')
+    setUploadingImage(true)
     try {
       const res = await api.uploadImage(file)
       update('image', res.url)
     } catch (err) {
       setError(err.message || 'আপলোড ব্যর্থ')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -240,25 +246,81 @@ export default function AddNewPostForm({
                 <AddPostCkeditor value={form.body} onChange={(html) => update('body', html)} />
               </div>
 
-              <div className="anp-row anp-row-3">
-                <div className="admin-form-group">
-                  <label>Image</label>
-                  <div className="anp-dash-upload" onClick={() => fileRef.current?.click()}>
+              <div className="admin-form-group anp-image-section" style={{ marginBottom: '1.25rem' }}>
+                <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Image</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '480px' }}>
+                  <div
+                    className="anp-dash-upload"
+                    style={{
+                      width: '100%',
+                      maxWidth: '320px',
+                      minHeight: '140px',
+                      border: '2px dashed #cbd5e1',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f8fafc',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => fileRef.current?.click()}
+                    title="Upload from Device"
+                  >
                     {form.image ? (
-                      <SafeImage src={form.image} alt={form.imageAlt || form.title || 'Image'} />
+                      <SafeImage
+                        src={form.image}
+                        alt={form.title || 'Image'}
+                        style={{ width: '100%', height: 'auto', maxHeight: '200px', objectFit: 'contain' }}
+                      />
                     ) : (
-                      <span>[Image]</span>
+                      <span style={{ color: '#94a3b8', fontSize: '14px' }}>[ Image Preview ]</span>
                     )}
-                    <input ref={fileRef} type="file" accept="image/*" hidden onChange={onDashFile} />
                   </div>
-                  <ImageUploadField
-                    label=""
-                    value={form.image}
-                    onChange={(url) => update('image', url)}
-                    libraryPicker
-                    hint=""
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn-secondary"
+                      onClick={() => setMediaPickerOpen(true)}
+                    >
+                      <i className="fa-solid fa-images" style={{ marginRight: '6px' }} />
+                      Photo Collection
+                    </button>
+
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn-primary"
+                      disabled={uploadingImage}
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      <i className="fa-solid fa-arrow-up-from-bracket" style={{ marginRight: '6px' }} />
+                      {uploadingImage ? 'Uploading...' : 'Upload from Device'}
+                    </button>
+
+                    {form.image ? (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-danger"
+                        style={{ padding: '6px 12px' }}
+                        onClick={() => update('image', '')}
+                        title="Remove image"
+                      >
+                        <i className="fa-solid fa-trash" style={{ marginRight: '4px' }} />
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                    hidden
+                    onChange={onDashFile}
                   />
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={form.showImageInDetails !== false}
@@ -267,38 +329,9 @@ export default function AddNewPostForm({
                     Show image in news details
                   </label>
                 </div>
-                <div className="admin-form-group">
-                  <label>Image Alt</label>
-                  <input
-                    value={form.imageAlt || ''}
-                    onChange={(e) => update('imageAlt', e.target.value)}
-                    placeholder="Enter Image Alt"
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label>Image Title</label>
-                  <input
-                    value={form.imageTitle || ''}
-                    onChange={(e) => update('imageTitle', e.target.value)}
-                    placeholder="Enter Image Title"
-                  />
-                </div>
               </div>
 
-              <div className="anp-row anp-row-3">
-                <div className="admin-form-group">
-                  <label>Custom Url</label>
-                  <input
-                    value={form.customUrl || ''}
-                    onChange={(e) => update('customUrl', e.target.value.trim())}
-                    placeholder="example-url"
-                  />
-                  {slugInvalid ? (
-                    <p className="anp-field-error">
-                      Special character (e.g. ,.@$) not allowed in this field
-                    </p>
-                  ) : null}
-                </div>
+              <div className="anp-row anp-row-2">
                 <div className="admin-form-group">
                   <label>Seo Title</label>
                   <input
@@ -330,15 +363,6 @@ export default function AddNewPostForm({
                 </div>
               </div>
 
-              <div className="admin-form-group">
-                <label>Reporter Message</label>
-                <textarea
-                  value={form.reporterMessage || ''}
-                  onChange={(e) => update('reporterMessage', e.target.value)}
-                  rows={3}
-                />
-              </div>
-
               <div className="anp-row anp-row-2">
                 <div className="admin-form-group">
                   <label>Video Url</label>
@@ -346,25 +370,6 @@ export default function AddNewPostForm({
                     value={form.videoUrl || ''}
                     onChange={(e) => update('videoUrl', e.target.value)}
                     placeholder="https://www.youtube.com/watch?v=FZDImeiPgMk"
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label>Reference</label>
-                  <input
-                    value={form.reference || ''}
-                    onChange={(e) => update('reference', e.target.value)}
-                    placeholder="Enter Reference"
-                  />
-                </div>
-              </div>
-
-              <div className="anp-row anp-row-2">
-                <div className="admin-form-group">
-                  <label>Post tag</label>
-                  <input
-                    value={form.tags}
-                    onChange={(e) => update('tags', e.target.value)}
-                    placeholder="Tag1,Tag2"
                   />
                 </div>
                 <div className="admin-form-group">
@@ -411,14 +416,6 @@ export default function AddNewPostForm({
                     onChange={(e) => update('featured', e.target.checked)}
                   />
                   Feature post
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={form.popular}
-                    onChange={(e) => update('popular', e.target.checked)}
-                  />
-                  Recommended post
                 </label>
                 <label>
                   <input
@@ -538,6 +535,16 @@ export default function AddNewPostForm({
           </form>
         </div>
       ) : null}
+
+      <MediaPickerDialog
+        open={mediaPickerOpen}
+        currentUrl={form.image}
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={(url) => {
+          update('image', url)
+          setMediaPickerOpen(false)
+        }}
+      />
     </div>
   )
 }
