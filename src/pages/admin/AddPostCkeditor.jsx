@@ -289,6 +289,18 @@ export default function AddPostCkeditor({ value, onChange }) {
         editor.on('instanceReady', () => {
           editor.setData(valueRef.current || '')
 
+          // Intercept commands via beforeCommandExec
+          editor.on('beforeCommandExec', (evt) => {
+            const cmdName = evt.data?.name
+            if (cmdName === 'image') {
+              evt.cancel()
+              openImageDialog()
+            } else if (cmdName === 'link') {
+              evt.cancel()
+              openLinkDialog()
+            }
+          })
+
           // Override Image command
           if (editor.commands?.image) {
             editor.commands.image.exec = () => {
