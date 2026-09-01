@@ -66,6 +66,20 @@ app.use((err, _req, res, _next) => {
 const globalCache = globalThis.__kkMongo || { conn: null, promise: null }
 globalThis.__kkMongo = globalCache
 
+function formatMongoUri(raw) {
+  if (!raw) return ''
+  try {
+    const match = raw.match(/^(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)@(.+)$/)
+    if (match) {
+      const [, proto, user, pass, rest] = match
+      const encodedUser = encodeURIComponent(decodeURIComponent(user))
+      const encodedPass = encodeURIComponent(decodeURIComponent(pass))
+      return `${proto}${encodedUser}:${encodedPass}@${rest}`
+    }
+  } catch {}
+  return raw
+}
+
 export async function connectDb() {
   const state = mongoose.connection.readyState
   if (state === 1) {
@@ -79,8 +93,9 @@ export async function connectDb() {
   }
 
   if (!globalCache.promise) {
-    const uri = process.env.MONGODB_URI
-    if (!uri) throw new Error('MONGODB_URI is required')
+    const rawUri = process.env.MONGODB_URI
+    if (!rawUri) throw new Error('MONGODB_URI is required')
+    const uri = formatMongoUri(rawUri)
 
     globalCache.promise = mongoose
       .connect(uri, {
