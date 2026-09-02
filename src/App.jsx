@@ -43,6 +43,7 @@ const PermissionsPage = lazy(() => import('./pages/admin/PermissionsPage'))
 const LoginLogoPage = lazy(() => import('./pages/admin/LoginLogoPage'))
 const TopicGridPage = lazy(() => import('./pages/admin/TopicGridPage'))
 const AiSettingsPage = lazy(() => import('./pages/admin/AiSettingsPage'))
+const FacebookSettingsPage = lazy(() => import('./pages/admin/FacebookSettingsPage'))
 const OpinionAdminPage = lazy(() => import('./pages/admin/OpinionAdminPage'))
 const PollAdminPage = lazy(() => import('./pages/admin/PollAdminPage'))
 const SurveyAdminPage = lazy(() => import('./pages/admin/SurveyAdminPage'))
@@ -109,6 +110,7 @@ export default function App() {
             <Route path="sidebars" element={<SidebarSettingsPage />} />
             <Route path="topic-grid" element={<TopicGridPage />} />
             <Route path="ai" element={<AiSettingsPage />} />
+            <Route path="facebook-settings" element={<FacebookSettingsPage />} />
             <Route path="opinions" element={<OpinionAdminPage />} />
             <Route path="opinions/new" element={<OpinionAdminPage />} />
             <Route path="opinions/:id" element={<OpinionAdminPage />} />

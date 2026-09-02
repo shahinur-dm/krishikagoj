@@ -362,12 +362,12 @@ function stripHtml(html) {
 router.post('/admin/:id/facebook-post', requireAuth, requirePermission('post', 'allpost'), async (req, res) => {
   try {
     const settings = await SiteSetting.findOne({ key: 'site' }).lean()
-    const pageId = process.env.FACEBOOK_PAGE_ID || settings?.facebookPageId || ''
-    const accessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN || settings?.facebookPageAccessToken || ''
+    const pageId = settings?.facebookPageId || process.env.FACEBOOK_PAGE_ID || ''
+    const accessToken = settings?.facebookPageAccessToken || process.env.FACEBOOK_PAGE_ACCESS_TOKEN || ''
 
     if (!pageId || !accessToken) {
       return res.status(400).json({
-        message: 'Facebook Page ID অথবা Page Access Token কনফিগার করা নেই। অনুগ্রহ করে সার্ভার .env ফাইলে FACEBOOK_PAGE_ID এবং FACEBOOK_PAGE_ACCESS_TOKEN যুক্ত করুন।',
+        message: 'Facebook Page ID অথবা Page Access Token কনফিগার করা নেই। অনুগ্রহ করে Admin Panel > Facebook Settings-এ গিয়ে অথবা সার্ভার .env ফাইলে Page ID ও Access Token যুক্ত করুন।',
       })
     }
 

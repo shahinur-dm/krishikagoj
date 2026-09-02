@@ -28,6 +28,8 @@ const siteSettingSchema = new mongoose.Schema(
     discussedConfig: { type: mongoose.Schema.Types.Mixed, default: {} },
     lazyBanner: { type: String, default: '' },
     facebookPage: { type: String, default: '' },
+    facebookPageId: { type: String, default: '' },
+    facebookPageAccessToken: { type: String, default: '' },
     phoneBn: { type: String, default: '' },
     phoneEn: { type: String, default: '' },
     email: { type: String, default: '' },

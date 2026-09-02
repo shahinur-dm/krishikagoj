@@ -158,6 +158,11 @@ export const api = {
   saveAiSettings: (body) => request('/settings/ai-writer', { method: 'PUT', body: JSON.stringify(body) }),
   generateAiArticle: (body) =>
     request('/settings/ai-writer/generate', { method: 'POST', body: JSON.stringify(body) }),
+  getFacebookSettings: () => request('/settings/facebook'),
+  saveFacebookSettings: (body) =>
+    request('/settings/facebook', { method: 'PUT', body: JSON.stringify(body) }),
+  testFacebookConnection: (body = {}) =>
+    request('/settings/facebook/test', { method: 'POST', body: JSON.stringify(body) }),
 
   getOpinions: () => request('/opinions'),
   getOpinion: (id) => request(`/opinions/${id}`),

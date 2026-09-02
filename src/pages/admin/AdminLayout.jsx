@@ -22,7 +22,10 @@ const navItems = [
     groupKey: 'navAiWriter',
     icon: 'fa-solid fa-robot',
     perm: 'setting',
-    children: [{ to: '/admin/ai', labelKey: 'navAiSettings' }],
+    children: [
+      { to: '/admin/ai', labelKey: 'navAiSettings' },
+      { to: '/admin/facebook-settings', labelKey: 'navFacebookSettings' },
+    ],
   },
   {
     groupKey: 'navOpinion',
@@ -80,6 +83,7 @@ const navItems = [
   { to: '/admin/namaz', labelKey: 'navNamaz', icon: 'fa-solid fa-mosque', perm: 'setting' },
   { to: '/admin/notice', labelKey: 'navNotice', icon: 'fa-solid fa-bullhorn', perm: 'setting' },
   { to: '/admin/social', labelKey: 'navSocial', icon: 'fa-solid fa-share-nodes', perm: 'setting' },
+  { to: '/admin/facebook-settings', labelKey: 'navFacebookSettings', icon: 'fa-brands fa-facebook', perm: 'setting' },
   { to: '/admin/seo', labelKey: 'navSeo', icon: 'fa-solid fa-magnifying-glass-chart', perm: ['setting', 'ads'] },
   { to: '/admin/ads', labelKey: 'navAds', icon: 'fa-solid fa-rectangle-ad', perm: ['setting', 'ads'] },
   { to: '/admin/important-websites', labelKey: 'navWebsites', icon: 'fa-solid fa-link', perm: 'setting' },
