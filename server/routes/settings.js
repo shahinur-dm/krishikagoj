@@ -2,6 +2,7 @@ import { Router } from 'express'
 import SiteSetting from '../models/SiteSetting.js'
 import { requireAuth, requirePermission, requireSuperAdmin } from '../middleware/auth.js'
 import { cacheGet, cacheSet, cacheDel } from '../utils/cache.js'
+import { generateArticle } from '../utils/aiGenerator.js'
 
 const router = Router()
 
@@ -73,6 +74,22 @@ router.put('/ai-writer', requireAuth, requirePermission('setting'), async (req, 
     res.json(aiWriter)
   } catch (err) {
     res.status(400).json({ message: err.message })
+  }
+})
+
+router.post('/ai-writer/generate', requireAuth, requirePermission('post'), async (req, res) => {
+  try {
+    const { title, headline, excerpt, category, subcategory, language } = req.body || {}
+    const text = await generateArticle({
+      headline: headline || title || '',
+      excerpt: excerpt || '',
+      category: category || '',
+      subcategory: subcategory || '',
+      language: language || 'bn',
+    })
+    res.json({ success: true, content: text })
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'AI generation failed' })
   }
 })
 

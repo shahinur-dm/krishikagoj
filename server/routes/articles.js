@@ -7,6 +7,7 @@ import { ARTICLE_LIST_SELECT, ARTICLE_DETAIL_SELECT } from '../utils/articleFiel
 import { cacheDel, cacheGet, cacheSet } from '../utils/cache.js'
 import { applyArticleSeoDefaults, slugify } from '../utils/seoContent.js'
 import Opinion from '../models/Opinion.js'
+import SiteSetting from '../models/SiteSetting.js'
 
 const router = Router()
 
@@ -360,16 +361,17 @@ function stripHtml(html) {
 
 router.post('/admin/:id/facebook-post', requireAuth, requirePermission('post', 'allpost'), async (req, res) => {
   try {
-    const pageId = process.env.FACEBOOK_PAGE_ID
-    const accessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN
+    const settings = await SiteSetting.findOne({ key: 'site' }).lean()
+    const pageId = process.env.FACEBOOK_PAGE_ID || settings?.facebookPageId || ''
+    const accessToken = process.env.FACEBOOK_PAGE_ACCESS_TOKEN || settings?.facebookPageAccessToken || ''
 
     if (!pageId || !accessToken) {
       return res.status(400).json({
-        message: 'Facebook Page ID অথবা Page Access Token কনফিগার করা নেই (.env ফাইলে যুক্ত করুন)',
+        message: 'Facebook Page ID অথবা Page Access Token কনফিগার করা নেই। অনুগ্রহ করে সার্ভার .env ফাইলে FACEBOOK_PAGE_ID এবং FACEBOOK_PAGE_ACCESS_TOKEN যুক্ত করুন।',
       })
     }
 
-    const article = await Article.findById(req.params.id)
+    const article = await Article.findById(req.params.id).populate('category subcategory')
     if (!article) {
       return res.status(404).json({ message: 'Article not found' })
     }
@@ -378,18 +380,22 @@ router.post('/admin/:id/facebook-post', requireAuth, requirePermission('post', '
       return res.status(403).json({ message: 'You can only publish your own posts to Facebook' })
     }
 
+    if (article.isPublished === false) {
+      return res.status(400).json({ message: 'ড্রাফট পোস্ট ফেসবুকে প্রকাশ করা যাবে না। প্রথমে পোস্টটি পাবলিশ করুন।' })
+    }
+
     const rawHost = req.get('x-forwarded-host') || req.get('host') || 'localhost:5050'
     const proto = req.get('x-forwarded-proto') || req.protocol || 'http'
     const defaultSiteUrl = `${proto}://${rawHost}`
     const siteUrl = (process.env.SITE_URL || process.env.VITE_SITE_URL || defaultSiteUrl).replace(/\/$/, '')
     const articleUrl = `${siteUrl}/news/${article.slug || article._id}`
 
-    const excerpt = article.excerpt || stripHtml(article.body).slice(0, 200)
+    const excerpt = article.excerpt || stripHtml(article.body).slice(0, 220)
     let caption = `${article.title}`
     if (excerpt) {
       caption += `\n\n${excerpt}`
     }
-    caption += `\n\nবিস্তারিত পড়ুন: ${articleUrl}`
+    caption += `\n\nপুরো article পড়তে:\n${articleUrl}\n\n#কৃষিকাগজ #কৃষি`
 
     let imageUrl = article.image || ''
     if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
@@ -398,21 +404,32 @@ router.post('/admin/:id/facebook-post', requireAuth, requirePermission('post', '
 
     let fbRes
     let fbData
+    let postedSuccess = false
+
+    // If there is an absolute image URL, try photo post
     if (imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
-      // Post photo with caption
-      const fbEndpoint = `https://graph.facebook.com/v19.0/${pageId}/photos`
-      fbRes = await fetch(fbEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: imageUrl,
-          caption: caption,
-          access_token: accessToken,
-        }),
-      })
-      fbData = await fbRes.json().catch(() => ({}))
-    } else {
-      // Post text / link to feed
+      try {
+        const fbEndpoint = `https://graph.facebook.com/v19.0/${pageId}/photos`
+        fbRes = await fetch(fbEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: imageUrl,
+            caption: caption,
+            access_token: accessToken,
+          }),
+        })
+        fbData = await fbRes.json().catch(() => ({}))
+        if (fbRes.ok && !fbData?.error && (fbData?.id || fbData?.post_id)) {
+          postedSuccess = true
+        }
+      } catch (err) {
+        console.warn('Photo post request error, trying feed link post:', err.message)
+      }
+    }
+
+    // Fallback to feed link post if photo post wasn't successful or no image
+    if (!postedSuccess) {
       const fbEndpoint = `https://graph.facebook.com/v19.0/${pageId}/feed`
       fbRes = await fetch(fbEndpoint, {
         method: 'POST',
@@ -424,15 +441,18 @@ router.post('/admin/:id/facebook-post', requireAuth, requirePermission('post', '
         }),
       })
       fbData = await fbRes.json().catch(() => ({}))
+      if (fbRes.ok && !fbData?.error && (fbData?.id || fbData?.post_id)) {
+        postedSuccess = true
+      }
     }
 
-    if (!fbRes.ok || fbData.error) {
-      const errMsg = fbData?.error?.message || 'Facebook API request failed'
+    if (!postedSuccess || fbData?.error) {
+      const errMsg = fbData?.error?.message || fbData?.error?.error_user_msg || 'Facebook API request failed'
       await Article.findByIdAndUpdate(article._id, {
         facebookPostStatus: 'failed',
       })
       return res.status(400).json({
-        message: `Facebook-এ পোস্ট করতে ব্যর্থ হয়েছে: ${errMsg}`,
+        message: `Facebook-এ পোস্ট করা যায়নি। Page connection/token/API configuration পরীক্ষা করুন। (${errMsg})`,
         error: fbData?.error,
       })
     }
@@ -452,7 +472,7 @@ router.post('/admin/:id/facebook-post', requireAuth, requirePermission('post', '
 
     return res.json({
       success: true,
-      message: 'Facebook Page-এ সফলভাবে পোস্ট প্রকাশিত হয়েছে',
+      message: 'Facebook-এ সফলভাবে পোস্ট হয়েছে',
       facebookPostId: updated.facebookPostId,
       facebookPostStatus: updated.facebookPostStatus,
       facebookPostedAt: updated.facebookPostedAt,

@@ -1812,6 +1812,13 @@
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.add-new-post .anp-ai-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .add-new-post .anp-dash-upload {

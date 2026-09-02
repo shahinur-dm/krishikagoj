@@ -30,6 +30,7 @@ export default function AddNewPostForm({
   const [writerForm, setWriterForm] = useState({ name: '', email: '', password: '' })
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [aiGenerating, setAiGenerating] = useState(false)
   const slugInvalid = Boolean(form.customUrl && SLUG_BAD.test(form.customUrl))
   const fileRef = useRef(null)
 
@@ -66,15 +67,33 @@ export default function AddNewPostForm({
     setError('')
   }
 
-  function runAiWriter() {
-    if (!form.title.trim()) {
-      setError('Enter Head Line first')
+  async function runAiWriter() {
+    if (!form.title || !form.title.trim()) {
+      setError('প্রথমে Head Line লিখুন')
       return
     }
+    if (aiGenerating) return
     setError('')
-    const intro = form.excerpt.trim() || form.title.trim()
-    const draft = `<p>${intro}</p><p></p>`
-    update('body', form.body && form.body !== '<p><br></p>' ? `${form.body}${draft}` : draft)
+    setAiGenerating(true)
+    try {
+      const res = await api.generateAiArticle({
+        headline: form.title.trim(),
+        title: form.title.trim(),
+        excerpt: form.excerpt?.trim() || '',
+        category: categoryName || '',
+        subcategory: subcategoryName || '',
+        language: form.language || 'bn',
+      })
+      if (res && res.content) {
+        update('body', res.content)
+      } else {
+        throw new Error('কোনো লেখা তৈরি করা সম্ভব হয়নি')
+      }
+    } catch (err) {
+      setError(err.message || 'AI দিয়ে প্রতিবেদন তৈরিতে সমস্যা হয়েছে। AI Settings পরীক্ষা করুন।')
+    } finally {
+      setAiGenerating(false)
+    }
   }
 
   async function saveWriter(e) {
@@ -238,8 +257,21 @@ export default function AddNewPostForm({
                 <label>
                   Details <span className="anp-req">*</span>
                 </label>
-                <button type="button" className="anp-ai-btn" onClick={runAiWriter}>
-                  ✨ AI Writer
+                <button
+                  type="button"
+                  className="anp-ai-btn"
+                  onClick={runAiWriter}
+                  disabled={aiGenerating}
+                  title="AI দিয়ে সম্পূর্ণ প্রতিবেদন তৈরি করুন"
+                >
+                  {aiGenerating ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }} />
+                      লেখা তৈরি হচ্ছে...
+                    </>
+                  ) : (
+                    '✨ AI Writer'
+                  )}
                 </button>
               </div>
               <div className="post-quill anp-quill anp-ckeditor">
