@@ -334,6 +334,42 @@ router.put('/:id', requireAuth, requirePermission('post'), async (req, res) => {
   }
 })
 
+async function handleBulkDelete(req, res) {
+  try {
+    const rawIds = req.body?.ids || req.body?.articleIds
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      return res.status(400).json({ message: 'মুছে ফেলার জন্য অন্তত একটি পোস্ট নির্বাচন করুন' })
+    }
+
+    const validIds = rawIds
+      .map((id) => String(id || '').trim())
+      .filter((id) => /^[0-9a-fA-F]{24}$/.test(id))
+
+    if (validIds.length === 0) {
+      return res.status(400).json({ message: 'সঠিক পোস্ট আইডি পাওয়া যায়নি' })
+    }
+
+    const filter = { _id: { $in: validIds } }
+    if (!canSeeAllPosts(req.user)) {
+      filter.authorUser = req.user._id
+    }
+
+    const deleteResult = await Article.deleteMany(filter)
+    bustCaches()
+
+    return res.json({
+      success: true,
+      message: `${deleteResult.deletedCount} টি পোস্ট সফলভাবে মুছে ফেলা হয়েছে`,
+      deletedCount: deleteResult.deletedCount,
+    })
+  } catch (err) {
+    return res.status(500).json({ message: err.message || 'পোস্ট মুছে ফেলতে সমস্যা হয়েছে' })
+  }
+}
+
+router.delete('/bulk', requireAuth, requirePermission('post'), handleBulkDelete)
+router.post('/bulk-delete', requireAuth, requirePermission('post'), handleBulkDelete)
+
 router.delete('/:id', requireAuth, requirePermission('post'), async (req, res) => {
   try {
     const existing = await Article.findById(req.params.id)

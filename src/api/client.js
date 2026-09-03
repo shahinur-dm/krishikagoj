@@ -105,8 +105,23 @@ export const api = {
   updateArticle: (id, body) =>
     request(`/articles/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteArticle: (id) => request(`/articles/${id}`, { method: 'DELETE' }),
+  bulkDeleteArticles: (ids) =>
+    request('/articles/bulk', { method: 'DELETE', body: JSON.stringify({ ids }) }),
   postToFacebook: (id) =>
     request(`/articles/admin/${id}/facebook-post`, { method: 'POST' }),
+
+  getLayoutTopics: (params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/layout-topics${qs ? `?${qs}` : ''}`)
+  },
+  createLayoutTopic: (body) =>
+    request('/layout-topics', { method: 'POST', body: JSON.stringify(body) }),
+  updateLayoutTopic: (id, body) =>
+    request(`/layout-topics/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteLayoutTopic: (id) =>
+    request(`/layout-topics/${id}`, { method: 'DELETE' }),
+  reorderLayoutTopics: (topics) =>
+    request('/layout-topics/reorder', { method: 'PUT', body: JSON.stringify({ topics }) }),
 
   getSettings: () => request('/settings'),
   updateSettings: (body) => request('/settings', { method: 'PUT', body: JSON.stringify(body) }),

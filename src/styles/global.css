@@ -6296,15 +6296,134 @@ main,
 }
 
 @media (min-width: 992px) {
-  .header-mobile,
-  .footer-mobile {
+  html:not(.is-physical-mobile) .header-mobile,
+  html:not(.is-physical-mobile) .footer-mobile {
     display: none !important;
   }
 
-  .header-desktop,
-  .footer-desktop {
+  html:not(.is-physical-mobile) .header-desktop,
+  html:not(.is-physical-mobile) .footer-desktop {
     display: block !important;
   }
+}
+
+/* =========================================================================
+   PHYSICAL MOBILE DEVICE OVERRIDE
+   When a user is on a physical mobile device with "Desktop site" enabled,
+   the browser forces a desktop viewport. These rules guarantee that the
+   website preserves the exact same mobile layout without breaking.
+   ========================================================================= */
+html.is-physical-mobile .header-desktop,
+html.is-physical-mobile .footer-desktop,
+html.is-physical-mobile .navbar-desktop,
+html.is-physical-mobile .hide-sm {
+  display: none !important;
+}
+
+html.is-physical-mobile .header-mobile,
+html.is-physical-mobile .footer-mobile {
+  display: block !important;
+}
+
+html.is-physical-mobile .container {
+  max-width: 100% !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+
+html.is-physical-mobile .heading-section .lead-3col {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html.is-physical-mobile .heading-section .lead-3col-col {
+  width: 100% !important;
+}
+
+html.is-physical-mobile .binodon-inner {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html.is-physical-mobile .binodon-side,
+html.is-physical-mobile .binodon-featured {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
+html.is-physical-mobile .home-spotlight-inner {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html.is-physical-mobile .home-spotlight-inner > [class*='col-'] {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+  border-right: 0 !important;
+  border-bottom: 1px solid #e2e2e2;
+}
+
+html.is-physical-mobile .cat-section-with-ad .row.align-items-start {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html.is-physical-mobile .cat-section-with-ad .col-lg-9,
+html.is-physical-mobile .cat-section-with-ad .col-lg-3 {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
+html.is-physical-mobile .home-split-row {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html.is-physical-mobile .home-split-row > [class*='col-'] {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+  border-right: 0 !important;
+  border-bottom: 1px solid #e2e2e2;
+}
+
+html.is-physical-mobile .home-admin-row {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html.is-physical-mobile .home-admin-main-col,
+html.is-physical-mobile .home-admin-side-col {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
+html.is-physical-mobile .home-admin-main {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html.is-physical-mobile .home-admin-main > [class*='col-'] {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
+html.is-physical-mobile .kk-post-grid {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+html.is-physical-mobile .kk-post-left,
+html.is-physical-mobile .kk-post-mid,
+html.is-physical-mobile .kk-post-right {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
 }
 
 /* =========================================================================

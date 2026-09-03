@@ -96,6 +96,7 @@ function normalize(data) {
     })),
     breakingNews: data.breakingNews || [],
     opinions: data.opinions || [],
+    layoutTopics: data.layoutTopics || [],
   }
 }
 
@@ -110,6 +111,7 @@ const empty = {
   leadLayout: null,
   byCategory: {},
   opinions: [],
+  layoutTopics: [],
   photos: [],
   videos: [],
   websites: [],

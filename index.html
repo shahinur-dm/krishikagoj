@@ -4,6 +4,25 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        function checkMobile() {
+          try {
+            var screenMin = Math.min(window.screen.width, window.screen.height);
+            var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            var isPhysicalMobile = isTouch && screenMin > 0 && screenMin < 600;
+            if (isPhysicalMobile) {
+              document.documentElement.classList.add('is-physical-mobile');
+            } else {
+              document.documentElement.classList.remove('is-physical-mobile');
+            }
+          } catch (e) {}
+        }
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        window.addEventListener('orientationchange', checkMobile);
+      })();
+    </script>
     <meta
       name="description"
       content="কৃষিকাগজ — বাংলাদেশের কৃষি খবর, ফসল, প্রাণিসম্পদ, মৎস্য, প্রযুক্তি ও কৃষকের কথা।"

@@ -17,6 +17,7 @@ const navItems = [
   { to: '/admin/posts', labelKey: 'navAllPosts', icon: 'fa-solid fa-newspaper', perm: 'post' },
   { to: '/admin/home-lead', labelKey: 'navHomeLead', icon: 'fa-solid fa-table-columns', perm: ['setting', 'post'] },
   { to: '/admin/sidebars', labelKey: 'navSidebars', icon: 'fa-solid fa-bars-staggered', perm: ['setting', 'category'] },
+  { to: '/admin/layout-topics', labelKey: 'navLayoutTopics', icon: 'fa-solid fa-layer-group', perm: ['setting', 'category', 'post'] },
   { to: '/admin/topic-grid', labelKey: 'navTopicGrid', icon: 'fa-solid fa-grip', perm: ['category', 'setting', 'post'] },
   {
     groupKey: 'navAiWriter',

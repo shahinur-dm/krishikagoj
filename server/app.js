@@ -22,6 +22,7 @@ import pollsRouter from './routes/polls.js'
 import surveysRouter from './routes/surveys.js'
 import pagesRouter from './routes/pages.js'
 import aiSettingsRouter from './routes/aiSettings.js'
+import layoutTopicsRouter from './routes/layoutTopics.js'
 
 const app = express()
 
@@ -57,6 +58,7 @@ app.use('/api/polls', pollsRouter)
 app.use('/api/surveys', surveysRouter)
 app.use('/api/pages', pagesRouter)
 app.use('/api/ai-settings', aiSettingsRouter)
+app.use('/api/layout-topics', layoutTopicsRouter)
 
 app.use((err, _req, res, _next) => {
   console.error(err)

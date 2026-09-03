@@ -75,6 +75,52 @@ export default function Sidebar({
 
       {!compact && (
         <>
+          {site.layoutTopics?.filter((t) => t.isActive !== false).length > 0 && (
+            <div className="common-border-box mb-3 d-none d-md-block">
+              <div className="section-title-flex">
+                <h3>
+                  <i className="fa-solid fa-layer-group kk-topic-icon" style={{ marginRight: '6px', color: '#16a34a' }} />
+                  টপিক সমূহ
+                </h3>
+              </div>
+              <div className="p-2" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {site.layoutTopics
+                  .filter((t) => t.isActive !== false)
+                  .map((t) => {
+                    const toUrl =
+                      t.url ||
+                      (t.category?.slug
+                        ? `/category/${t.category.slug}`
+                        : t.slug
+                          ? `/category/${t.slug}`
+                          : '#')
+                    return (
+                      <Link
+                        key={t._id}
+                        to={toUrl}
+                        style={{
+                          background: '#f8fafc',
+                          color: '#1e293b',
+                          padding: '5px 9px',
+                          borderRadius: '6px',
+                          fontSize: '12.5px',
+                          fontWeight: 500,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          border: '1px solid #e2e8f0',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <i className={t.icon || 'fa-solid fa-leaf'} style={{ color: '#16a34a', fontSize: '11px' }} />
+                        {t.title}
+                      </Link>
+                    )
+                  })}
+              </div>
+            </div>
+          )}
+
           {settings?.facebookPage && (
             <div className="common-border-box mb-3 p-3 d-none d-lg-block">
               <a href={settings.facebookPage} target="_blank" rel="noreferrer" className="fb-link-btn">

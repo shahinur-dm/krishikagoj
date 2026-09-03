@@ -48,6 +48,9 @@ export default function PostsListPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [postingFbId, setPostingFbId] = useState(null)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [showBulkModal, setShowBulkModal] = useState(false)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   async function load() {
     const data = await api.getAdminArticles()
@@ -180,10 +183,52 @@ export default function PostsListPage() {
     try {
       await api.deleteArticle(id)
       setMessage('পোস্ট মুছে ফেলা হয়েছে')
+      setSelectedIds((prev) => prev.filter((it) => it !== id))
       await load()
       await refreshSiteData().catch(() => {})
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  const allPageSelected = pageRows.length > 0 && pageRows.every((item) => selectedIds.includes(item._id))
+  const somePageSelected = pageRows.some((item) => selectedIds.includes(item._id))
+
+  function toggleSelectAll(checked) {
+    if (checked) {
+      const pageIds = pageRows.map((item) => item._id)
+      setSelectedIds((prev) => [...new Set([...prev, ...pageIds])])
+    } else {
+      const pageIdsSet = new Set(pageRows.map((item) => item._id))
+      setSelectedIds((prev) => prev.filter((id) => !pageIdsSet.has(id)))
+    }
+  }
+
+  function toggleSelectItem(id, checked) {
+    if (checked) {
+      setSelectedIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+    } else {
+      setSelectedIds((prev) => prev.filter((it) => it !== id))
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0 || isBulkDeleting) return
+    setIsBulkDeleting(true)
+    setError('')
+    setMessage('')
+    try {
+      const res = await api.bulkDeleteArticles(selectedIds)
+      setMessage(res.message || `${selectedIds.length} টি পোস্ট সফলভাবে মুছে ফেলা হয়েছে`)
+      setSelectedIds([])
+      setShowBulkModal(false)
+      await load()
+      await refreshSiteData().catch(() => {})
+    } catch (err) {
+      setError(err.message || 'পোস্ট মুছে ফেলতে সমস্যা হয়েছে')
+      setShowBulkModal(false)
+    } finally {
+      setIsBulkDeleting(false)
     }
   }
 
@@ -309,6 +354,15 @@ export default function PostsListPage() {
           <button type="button" onClick={() => exportRows('excel')}>
             <i className="fa-regular fa-file-excel" /> Excel
           </button>
+          <button
+            type="button"
+            className="pl-bulk-del-btn"
+            disabled={selectedIds.length === 0}
+            onClick={() => setShowBulkModal(true)}
+            title={selectedIds.length === 0 ? 'Select posts to delete' : `Delete ${selectedIds.length} selected posts`}
+          >
+            <i className="fa-solid fa-trash-can" /> Delete Selected {selectedIds.length > 0 ? `(${selectedIds.length})` : ''}
+          </button>
         </div>
         <label className="pl-search">
           Search:
@@ -320,6 +374,18 @@ export default function PostsListPage() {
         <table className="pl-table">
           <thead>
             <tr>
+              <th style={{ width: '38px', textAlign: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={allPageSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = !allPageSelected && somePageSelected
+                  }}
+                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                  title="Select all on this page"
+                  aria-label="Select all on this page"
+                />
+              </th>
               <th>SI</th>
               <th>Image</th>
               <th onClick={() => toggleSort('title')}>Title{sortMark('title')}</th>
@@ -338,7 +404,7 @@ export default function PostsListPage() {
           <tbody>
             {pageRows.length === 0 ? (
               <tr>
-                <td colSpan={13}>No posts found</td>
+                <td colSpan={14}>No posts found</td>
               </tr>
             ) : null}
             {pageRows.map((item, i) => {
@@ -346,9 +412,18 @@ export default function PostsListPage() {
               const isPosting = postingFbId === item._id
               const isPosted = item.facebookPostStatus === 'posted' || Boolean(item.facebookPostId)
               const isFailed = item.facebookPostStatus === 'failed'
+              const isSelected = selectedIds.includes(item._id)
 
               return (
-                <tr key={item._id}>
+                <tr key={item._id} className={isSelected ? 'is-row-selected' : ''}>
+                  <td style={{ textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => toggleSelectItem(item._id, e.target.checked)}
+                      aria-label={`Select ${item.title}`}
+                    />
+                  </td>
                   <td>{(safePage - 1) * pageSize + i + 1}</td>
                   <td>
                     {item.image ? <SafeImage src={item.image} alt="" className="pl-thumb" /> : '—'}
@@ -436,6 +511,56 @@ export default function PostsListPage() {
           </tbody>
         </table>
       </div>
+
+      {showBulkModal && (
+        <div className="pl-modal-overlay" onClick={() => !isBulkDeleting && setShowBulkModal(false)}>
+          <div className="pl-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="pl-modal-header">
+              <h4>Confirm Bulk Delete</h4>
+              <button
+                type="button"
+                className="pl-modal-close"
+                onClick={() => !isBulkDeleting && setShowBulkModal(false)}
+                disabled={isBulkDeleting}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="pl-modal-body">
+              <p style={{ margin: 0, fontSize: '15px', color: '#1e293b' }}>
+                Are you sure you want to delete the <strong>{selectedIds.length}</strong> selected posts?
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: '13.5px', color: '#dc2626', fontWeight: 500 }}>
+                This action cannot be undone.
+              </p>
+            </div>
+            <div className="pl-modal-footer">
+              <button
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                onClick={() => setShowBulkModal(false)}
+                disabled={isBulkDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn-danger"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+              >
+                {isBulkDeleting ? (
+                  <>
+                    <i className="fa-solid fa-spinner fa-spin" /> Deleting…
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="pl-foot">
         <p>

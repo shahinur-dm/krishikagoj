@@ -13,9 +13,11 @@ import { cacheGet, cacheSet } from '../utils/cache.js'
 import { isAdsGloballyEnabled } from '../utils/adsEnabled.js'
 import BreakingNews from '../models/BreakingNews.js'
 import Opinion from '../models/Opinion.js'
+import LayoutTopic from '../models/LayoutTopic.js'
+import { ensureDefaultLayoutTopics } from './layoutTopics.js'
 
 const router = Router()
-const CACHE_KEY = 'home:v42'
+const CACHE_KEY = 'home:v43'
 const CACHE_TTL = 5_000
 
 const SLIM =
@@ -262,6 +264,7 @@ router.get('/', async (req, res) => {
       staff,
       breakingNews,
       opinions,
+      layoutTopics,
     ] = await Promise.all([
       Category.find({ isActive: true }).select('name nameEn slug order').sort({ order: 1, name: 1 }).lean(),
       Article.find({ isPublished: true })
@@ -313,6 +316,11 @@ router.get('/', async (req, res) => {
         .select('name title details image createdAt')
         .sort({ createdAt: -1 })
         .limit(10)
+        .lean(),
+      LayoutTopic.find({ isActive: { $ne: false } })
+        .populate('category', 'name nameEn slug')
+        .populate('subcategory', 'nameBn nameEn slug')
+        .sort({ order: 1, createdAt: 1 })
         .lean(),
     ])
 
@@ -494,6 +502,19 @@ router.get('/', async (req, res) => {
         details: o.details || '',
         image: o.image || '',
         createdAt: o.createdAt,
+      })),
+      layoutTopics: (layoutTopics || []).map((t) => ({
+        _id: t._id,
+        title: t.title,
+        titleEn: t.titleEn || '',
+        slug: t.slug,
+        icon: t.icon || 'fa-solid fa-leaf',
+        image: t.image || '',
+        url: t.url || '',
+        category: t.category ? { _id: t.category._id, name: t.category.name, slug: t.category.slug } : null,
+        subcategory: t.subcategory ? { _id: t.subcategory._id, nameBn: t.subcategory.nameBn, slug: t.subcategory.slug } : null,
+        order: t.order || 0,
+        isActive: t.isActive !== false,
       })),
     }
 
