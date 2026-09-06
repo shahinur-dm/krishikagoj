@@ -4384,13 +4384,15 @@ section[class*='home-layout-'] .img-zoom-hover img {
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow: visible;
   overflow-wrap: break-word;
   word-break: normal;
   word-wrap: break-word;
   hyphens: none;
   -webkit-hyphens: none;
   white-space: normal;
+  height: auto;
+  min-height: 0;
 }
 
 .entry-content p,
@@ -6770,7 +6772,9 @@ html.is-physical-mobile .kk-post-right {
     hyphens: none;
     min-width: 0;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow: visible;
+    height: auto;
+    max-height: none;
   }
 
   .entry-content iframe,
@@ -7074,6 +7078,13 @@ html.is-physical-mobile .kk-post-right {
     border-radius: 8px;
     height: auto;
     min-height: 0;
+    overflow: visible;
+  }
+
+  .entry-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .post-title,
