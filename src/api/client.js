@@ -305,6 +305,7 @@ export function mapArticle(a) {
     body: a.body,
     bodyEn: a.bodyEn || '',
     image: a.image,
+    imageCaption: a.imageCaption || '',
     showImageInDetails: a.showImageInDetails !== false,
     author: a.author,
     tags: a.tags || '',

@@ -4,4 +4,4 @@ export const ARTICLE_LIST_SELECT =
 
 /** Full fields for public article page + admin edit form */
 export const ARTICLE_DETAIL_SELECT =
-  'title titleEn slug excerpt excerptEn metaDescription body bodyEn image images showImageInDetails tags author authorUser views featured headline latest popular bigthumbnail firstSection firstSectionThumbnail categoryHomepage isPublished publishedAt createdAt category subcategory printViewLink facebookPostId facebookPostStatus facebookPostedAt'
+  'title titleEn slug excerpt excerptEn metaDescription body bodyEn image imageCaption images showImageInDetails tags author authorUser views featured headline latest popular bigthumbnail firstSection firstSectionThumbnail categoryHomepage isPublished publishedAt createdAt category subcategory printViewLink facebookPostId facebookPostStatus facebookPostedAt'

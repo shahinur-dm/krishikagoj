@@ -235,6 +235,11 @@ function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT,
               {detailsImage ? (
                 <figure className="news-heading-pic">
                   <SafeImage src={detailsImage} alt={title} width={900} priority={isFirst} />
+                  {article.imageCaption ? (
+                    <figcaption className="news-image-caption">
+                      {article.imageCaption}
+                    </figcaption>
+                  ) : null}
                 </figure>
               ) : null}
 

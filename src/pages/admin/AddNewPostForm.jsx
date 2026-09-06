@@ -360,6 +360,18 @@ export default function AddNewPostForm({
                     />
                     Show image in news details
                   </label>
+
+                  <div className="admin-form-group" style={{ marginTop: '10px', marginBottom: 0 }}>
+                    <label style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px', display: 'block', color: '#374151' }}>
+                      Image Caption
+                    </label>
+                    <input
+                      type="text"
+                      value={form.imageCaption || ''}
+                      onChange={(e) => update('imageCaption', e.target.value)}
+                      placeholder="Enter Image Caption / ছবির ক্যাপশন লিখুন"
+                    />
+                  </div>
                 </div>
               </div>
 

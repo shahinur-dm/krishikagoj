@@ -11,6 +11,7 @@ const articleSchema = new mongoose.Schema(
     body: { type: String, required: true },
     bodyEn: { type: String, default: '' },
     image: { type: String, default: '' },
+    imageCaption: { type: String, default: '' },
     images: { type: [String], default: [] },
     showImageInDetails: { type: Boolean, default: true },
     tags: { type: String, default: '' },

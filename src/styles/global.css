@@ -4528,6 +4528,19 @@ section[class*='home-layout-'] .img-zoom-hover img {
   margin: 0 auto;
 }
 
+.news-image-caption {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #4b5563;
+  padding: 8px 12px 10px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  margin: 0;
+  text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 .post-subtitle {
   margin-bottom: 18px;
   padding-bottom: 8px;
