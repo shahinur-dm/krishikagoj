@@ -1022,11 +1022,13 @@ section[class*='home-layout-'] .img-zoom-hover img {
   font-size: 15px;
   line-height: 22px;
   margin: 0 0 4px;
-  display: block;
-  -webkit-line-clamp: unset;
-  overflow: visible;
-  height: auto;
-  max-height: none;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 3 !important;
+  line-clamp: 3 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
+  max-height: 66px;
 }
 
 /* 3×3 category grid — gap between cards */
@@ -1345,11 +1347,13 @@ section[class*='home-layout-'] .img-zoom-hover img {
   line-height: 24px;
   color: #555;
   text-align: justify;
-  display: block;
-  -webkit-line-clamp: unset;
-  overflow: visible;
-  height: auto;
-  max-height: none;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 4 !important;
+  line-clamp: 4 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
+  max-height: 96px;
   margin: 0;
 }
 
@@ -1922,13 +1926,16 @@ section[class*='home-layout-'] .img-zoom-hover img {
 
 .home-layout-hero-grid .home-hero-featured .featured-subtitle {
   font-size: 14.5px !important;
-  line-height: 1.62 !important;
+  line-height: 23px !important;
   color: #4b5563 !important;
   margin-bottom: 10px !important;
   display: -webkit-box !important;
-  -webkit-line-clamp: 7 !important;
+  -webkit-line-clamp: 4 !important;
+  line-clamp: 4 !important;
   -webkit-box-orient: vertical !important;
   overflow: hidden !important;
+  text-overflow: ellipsis;
+  max-height: 92px;
   text-align: justify;
 }
 
@@ -2127,14 +2134,16 @@ section[class*='home-layout-'] .img-zoom-hover img {
 
 .featured-subtitle {
   font-size: 15px !important;
-  line-height: 1.55 !important;
+  line-height: 23px !important;
   color: #374151 !important;
   margin-bottom: 8px !important;
-  display: block;
-  -webkit-line-clamp: unset;
-  overflow: visible;
-  height: auto;
-  max-height: none;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 4 !important;
+  line-clamp: 4 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
+  max-height: 92px;
 }
 
 .featured-date {
@@ -2146,15 +2155,19 @@ section[class*='home-layout-'] .img-zoom-hover img {
   margin-top: 2px !important;
 }
 
-.home-layout-binodon .binodon-featured-card .description {
+.home-layout-binodon .binodon-featured-card .description,
+.home-layout-projukti .binodon-featured-card .description,
+.home-layout-motamot-grid .binodon-featured-card .description {
   font-size: 15px;
-  line-height: 1.55;
+  line-height: 23px;
   color: #374151;
-  display: block;
-  -webkit-line-clamp: unset;
-  overflow: visible;
-  height: auto;
-  max-height: none;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 4 !important;
+  line-clamp: 4 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
+  max-height: 92px;
   margin-bottom: 8px;
 }
 
@@ -7324,13 +7337,15 @@ html.is-physical-mobile .kk-post-right {
     line-height: 22px !important;
     color: #4b5563 !important;
     margin-bottom: 6px !important;
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    overflow: visible !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis;
     overflow-wrap: break-word !important;
     word-break: break-word !important;
-    height: auto !important;
-    max-height: none !important;
+    max-height: 66px !important;
   }
 
   .featured-date {
@@ -7629,11 +7644,14 @@ html.is-physical-mobile .kk-post-right {
   }
 
   .home-layout-hero-grid .home-hero-featured .featured-subtitle {
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    overflow: visible !important;
-    height: auto !important;
-    max-height: none !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 22px !important;
+    max-height: 66px !important;
   }
 
   .home-layout-hero-grid .home-hero-mini-grid {
@@ -7750,10 +7768,14 @@ html.is-physical-mobile .kk-post-right {
   .grid-category-1 .equal-news-grid .news-sm.bg-blue .description {
     color: rgba(255, 255, 255, 0.85) !important;
     font-size: 12px !important;
-    line-height: 17px !important;
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    overflow: visible !important;
+    line-height: 18px !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-height: 54px !important;
   }
 
   .grid-category-1 .equal-news-grid .news-sm:not(.bg-blue) {
@@ -7779,17 +7801,17 @@ html.is-physical-mobile .kk-post-right {
 
   .grid-category-1 .equal-news-grid .news-sm:not(.bg-blue) .description {
     font-size: 12px !important;
-    line-height: 17px !important;
+    line-height: 18px !important;
     color: #4b5563 !important;
     padding: 0 8px 8px !important;
     margin: 0 !important;
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    overflow: visible !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-    height: auto !important;
-    max-height: none !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-height: 54px !important;
   }
 
   /* ---------------------------------------------------- */
@@ -7919,13 +7941,13 @@ html.is-physical-mobile .kk-post-right {
     line-height: 22px !important;
     color: #4b5563 !important;
     margin: 0 !important;
-    display: block !important;
-    -webkit-line-clamp: unset !important;
-    overflow: visible !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-    height: auto !important;
-    max-height: none !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-height: 66px !important;
   }
 
   /* Lead 2-column grid: ALL cards in clean 2-column grid like Education Bangla */
