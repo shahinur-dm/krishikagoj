@@ -109,6 +109,30 @@ export const api = {
     request('/articles/bulk', { method: 'DELETE', body: JSON.stringify({ ids }) }),
   postToFacebook: (id) =>
     request(`/articles/admin/${id}/facebook-post`, { method: 'POST' }),
+  backupArticles: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => [k, String(v)]),
+    ).toString()
+    return request(`/articles/admin/backup${qs ? `?${qs}` : ''}`)
+  },
+  restoreArticles: async (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    const headers = {}
+    const token = getToken()
+    if (token) headers.Authorization = `Bearer ${token}`
+    const res = await fetch(`${API_URL}/articles/admin/restore`, {
+      method: 'POST',
+      headers,
+      body: form,
+      credentials: 'same-origin',
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.message || `Restore failed (${res.status})`)
+    return data
+  },
 
   getLayoutTopics: (params = {}) => {
     const qs = new URLSearchParams(params).toString()

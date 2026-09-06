@@ -1998,6 +1998,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
   margin-bottom: 0.85rem;
 }
 
@@ -2006,6 +2007,70 @@
   font-size: 1.15rem;
   font-weight: 600;
   color: #1f2937;
+}
+
+.post-list-page .pl-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.post-list-page .pl-backup-btn,
+.post-list-page .pl-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--pl-green);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--pl-green);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.42rem 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.post-list-page .pl-backup-btn:hover:not(:disabled),
+.post-list-page .pl-upload-btn:hover:not(:disabled) {
+  background: var(--pl-green);
+  color: #fff;
+}
+
+.post-list-page .pl-backup-btn:disabled,
+.post-list-page .pl-upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.post-list-page .pl-date-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.post-list-page .pl-date-input {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  color: #374151;
+  background: #fff;
+  height: 33px;
+  box-sizing: border-box;
+}
+
+.post-list-page .pl-date-input:focus {
+  outline: none;
+  border-color: var(--pl-green);
+}
+
+.post-list-page .pl-date-sep {
+  font-size: 0.85rem;
+  color: #4b5563;
+  font-weight: 500;
 }
 
 .post-list-page .pl-filter-btn {

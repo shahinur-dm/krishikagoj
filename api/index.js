@@ -7,7 +7,9 @@ async function handler(req, res) {
     console.error('DB connect failed:', err.message)
     if (!res.headersSent) {
       res.status(500).json({
+        ok: false,
         message: 'ডাটাবেস সংযোগ ব্যর্থ। Atlas cluster চালু আছে এবং Network Access-এ 0.0.0.0/0 আছে কিনা দেখুন।',
+        error: err.message,
       })
     }
     return

@@ -29,11 +29,20 @@ const app = express()
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
 
-app.get('/api/health', (_req, res) => {
-  res.json({
-    ok: true,
-    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-  })
+app.get('/api/health', async (_req, res) => {
+  try {
+    await connectDb()
+    res.json({
+      ok: true,
+      db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    })
+  } catch (err) {
+    res.status(500).json({
+      ok: false,
+      db: 'disconnected',
+      error: err.message,
+    })
+  }
 })
 
 app.use('/api/home', homeRouter)
@@ -68,10 +77,13 @@ app.use((err, _req, res, _next) => {
 const globalCache = globalThis.__kkMongo || { conn: null, promise: null }
 globalThis.__kkMongo = globalCache
 
+let lastDbError = null
+
 function formatMongoUri(raw) {
   if (!raw) return ''
+  let cleaned = String(raw).trim().replace(/^["']|["']$/g, '').trim()
   try {
-    const match = raw.match(/^(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)@(.+)$/)
+    const match = cleaned.match(/^(mongodb(?:\+srv)?:\/\/)([^:]+):([^@]+)@(.+)$/)
     if (match) {
       const [, proto, user, pass, rest] = match
       const encodedUser = encodeURIComponent(decodeURIComponent(user))
@@ -79,13 +91,14 @@ function formatMongoUri(raw) {
       return `${proto}${encodedUser}:${encodedPass}@${rest}`
     }
   } catch {}
-  return raw
+  return cleaned
 }
 
 export async function connectDb() {
   const state = mongoose.connection.readyState
   if (state === 1) {
     globalCache.conn = mongoose
+    lastDbError = null
     return mongoose
   }
 
@@ -96,7 +109,10 @@ export async function connectDb() {
 
   if (!globalCache.promise) {
     const rawUri = process.env.MONGODB_URI
-    if (!rawUri) throw new Error('MONGODB_URI is required')
+    if (!rawUri) {
+      lastDbError = 'MONGODB_URI environment variable is missing'
+      throw new Error(lastDbError)
+    }
     const uri = formatMongoUri(rawUri)
 
     globalCache.promise = mongoose
@@ -111,11 +127,13 @@ export async function connectDb() {
       .then((conn) => {
         console.log('MongoDB connected:', conn.connection.name)
         globalCache.conn = conn
+        lastDbError = null
         return conn
       })
       .catch((err) => {
         globalCache.promise = null
         globalCache.conn = null
+        lastDbError = err.message
         throw err
       })
   }

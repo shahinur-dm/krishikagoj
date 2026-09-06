@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, articlePath } from '../../api/client'
 import { refreshSiteData } from '../../context/SiteDataContext'
@@ -52,9 +52,62 @@ export default function PostsListPage() {
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const [isBackingUp, setIsBackingUp] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(false)
+  const restoreFileInputRef = useRef(null)
+
   async function load() {
     const data = await api.getAdminArticles()
     setItems(Array.isArray(data) ? data : [])
+  }
+
+  async function handleBackup() {
+    if (isBackingUp) return
+    setIsBackingUp(true)
+    setError('')
+    setMessage('')
+    try {
+      const data = await api.backupArticles({ from: fromDate || undefined, to: toDate || undefined })
+      const jsonStr = JSON.stringify(data, null, 2)
+      const dateTag =
+        fromDate || toDate
+          ? `${fromDate || 'start'}_to_${toDate || 'end'}`
+          : new Date().toISOString().slice(0, 10)
+      const fileName = `krishikagoj-news-backup-${dateTag}.json`
+      downloadBlob(fileName, 'application/json', jsonStr)
+      setMessage(`সফলভাবে ${data.postCount || 0} টি পোস্টের ব্যাকআপ ডাউনলোড হয়েছে`)
+    } catch (err) {
+      setError(err.message || 'ব্যাকআপ ডাউনলোড ব্যর্থ হয়েছে')
+    } finally {
+      setIsBackingUp(false)
+    }
+  }
+
+  async function handleFileSelected(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+
+    const confirmRestore = window.confirm(
+      `আপনি কি "${file.name}" ব্যাকআপ ফাইলটি আপলোড করে খবর রিস্টোর করতে চান?\n\nএটি ব্যাকআপে থাকা পোস্ট ও ছবিসমূহ ডাটাবেসে রিস্টোর করবে।`,
+    )
+    if (!confirmRestore) return
+
+    setIsRestoring(true)
+    setError('')
+    setMessage('')
+    try {
+      const res = await api.restoreArticles(file)
+      setMessage(res.message || 'সফলভাবে পোস্ট রিস্টোর সম্পন্ন হয়েছে')
+      await load()
+      await refreshSiteData().catch(() => {})
+    } catch (err) {
+      setError(err.message || 'রিস্টোর ব্যর্থ হয়েছে')
+    } finally {
+      setIsRestoring(false)
+    }
   }
 
   useEffect(() => {
@@ -312,9 +365,80 @@ export default function PostsListPage() {
 
       <div className="pl-head">
         <h3>Post list</h3>
-        <button type="button" className="pl-filter-btn" onClick={() => setFilterOpen((v) => !v)}>
-          <i className="fa-solid fa-filter" /> Filter
-        </button>
+        <div className="pl-head-actions">
+          <button
+            type="button"
+            className="pl-backup-btn"
+            onClick={handleBackup}
+            disabled={isBackingUp || isRestoring}
+            title={
+              fromDate || toDate
+                ? `Backup news from ${fromDate || 'start'} to ${toDate || 'now'}`
+                : 'Backup all news'
+            }
+          >
+            {isBackingUp ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin" /> Backing up…
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-download" /> Backup All News
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className="pl-upload-btn"
+            onClick={() => restoreFileInputRef.current?.click()}
+            disabled={isBackingUp || isRestoring}
+            title="Upload previously downloaded backup file to restore news"
+          >
+            {isRestoring ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin" /> Uploading…
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-upload" /> Upload All News
+              </>
+            )}
+          </button>
+          <input
+            ref={restoreFileInputRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: 'none' }}
+            onChange={handleFileSelected}
+          />
+
+          <div className="pl-date-range">
+            <input
+              type="date"
+              className="pl-date-input"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              title="From Date"
+              placeholder="From Date"
+              aria-label="From Date"
+            />
+            <span className="pl-date-sep">to</span>
+            <input
+              type="date"
+              className="pl-date-input"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              title="To Date"
+              placeholder="To Date"
+              aria-label="To Date"
+            />
+          </div>
+
+          <button type="button" className="pl-filter-btn" onClick={() => setFilterOpen((v) => !v)}>
+            <i className="fa-solid fa-filter" /> Filter
+          </button>
+        </div>
       </div>
 
       {filterOpen ? (
