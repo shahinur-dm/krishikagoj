@@ -4131,14 +4131,17 @@ section[class*='home-layout-'] .img-zoom-hover img {
 
 .kk-post-left {
   grid-area: left;
+  order: 2;
 }
 
 .kk-post-mid {
   grid-area: mid;
+  order: 1;
 }
 
 .kk-post-right {
   grid-area: right;
+  order: 3;
 }
 
 .kk-post-left,
@@ -6431,9 +6434,22 @@ html.is-physical-mobile .kk-post-grid {
   flex-direction: column !important;
 }
 
-html.is-physical-mobile .kk-post-left,
-html.is-physical-mobile .kk-post-mid,
+html.is-physical-mobile .kk-post-mid {
+  order: 1 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
+html.is-physical-mobile .kk-post-left {
+  order: 2 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
 html.is-physical-mobile .kk-post-right {
+  order: 3 !important;
   width: 100% !important;
   max-width: 100% !important;
   flex: 0 0 100% !important;
