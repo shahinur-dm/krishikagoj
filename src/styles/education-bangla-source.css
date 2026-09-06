@@ -589,8 +589,8 @@ header {
  color: #2d3134;
  font-weight: 600;
  margin: 0;
- max-height: 70px;
- overflow: hidden;
+ max-height: none;
+ overflow: visible;
 }
  
 .news-list span {
