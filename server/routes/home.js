@@ -126,7 +126,7 @@ async function buildTopicGrid(settings) {
   })
 
   const extra = await Article.find({
-    isPublished: true,
+    isPublished: { $ne: false },
     $or: [{ subcategory: { $in: topics.map((topic) => topic._id) } }, { _id: { $in: pickedIds } }],
   })
     .select(SLIM)

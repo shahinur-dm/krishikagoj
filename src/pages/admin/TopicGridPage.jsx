@@ -25,7 +25,10 @@ function publishedPosts(list) {
 function buildCards(subs, posts) {
   const bySlug = new Map((subs || []).map((s) => [s.slug, s]))
   return CARD_DEFS.map((def, index) => {
-    const sub = bySlug.get(def.slug) || (subs || []).find((s) => s.nameBn === def.nameBn)
+    const sub =
+      bySlug.get(def.slug) ||
+      (subs || []).find((s) => s.nameBn === def.nameBn) ||
+      (subs || []).find((s) => s.homeOrder === index + 1 && s.showOnHome)
     const extra = def.extra
     const slots = emptySlots(extra)
     if (sub) {
@@ -55,6 +58,7 @@ function titleOf(posts, id) {
 export default function TopicGridPage() {
   const { isEn } = useLang()
   const [posts, setPosts] = useState([])
+  const [categories, setCategories] = useState([])
   const [cards, setCards] = useState([])
   const [saved, setSaved] = useState([])
   const [error, setError] = useState('')
@@ -63,12 +67,14 @@ export default function TopicGridPage() {
   const [drag, setDrag] = useState(null)
 
   async function load() {
-    const [subs, allPosts] = await Promise.all([
+    const [subs, cats, allPosts] = await Promise.all([
       api.getAllSubcategories(),
+      api.getAllCategories().catch(() => []),
       api.getAdminArticles().catch(() => api.getArticles({ limit: '80' })),
     ])
     const pub = publishedPosts(allPosts)
     setPosts(pub)
+    setCategories(cats || [])
     const next = buildCards(subs, pub)
     setCards(next)
     setSaved(JSON.parse(JSON.stringify(next)))
@@ -126,24 +132,57 @@ export default function TopicGridPage() {
     setSaving(true)
     setError('')
     try {
+      let cats = categories
+      if (!cats.length) {
+        cats = await api.getAllCategories().catch(() => [])
+        setCategories(cats)
+      }
+      const defaultCat =
+        cats.find((c) => c.slug === 'motso' || String(c.name || '').includes('মৎস্য')) ||
+        cats.find((c) => c.slug !== 'home') ||
+        cats[0]
+      const defaultCatId = defaultCat?._id || defaultCat?.id
+
       for (const card of cards) {
-        if (!card.sub) continue
-        await api.updateSubcategory(card.sub._id, {
-          nameBn: String(card.nameBn || card.sub.nameBn || '').trim() || card.sub.nameBn,
-          nameEn: String(card.nameEn || card.sub.nameEn || '').trim(),
-          slug: card.sub.slug,
-          category: card.sub.category?._id || card.sub.category,
-          order: card.sub.order || 0,
-          isActive: card.sub.isActive !== false,
+        const def = CARD_DEFS[card.index] || {}
+        const nameBn = String(card.nameBn || card.sub?.nameBn || def.nameBn || '').trim()
+        const nameEn = String(card.nameEn || card.sub?.nameEn || def.nameEn || '').trim()
+        const slug = card.sub?.slug || def.slug || `topic-${card.index + 1}`
+        const category = card.sub?.category?._id || card.sub?.category || defaultCatId
+
+        if (!category) continue
+
+        const payload = {
+          nameBn,
+          nameEn,
+          slug,
+          category,
+          order: card.sub?.order || card.index + 1,
+          isActive: card.sub?.isActive !== false,
           showOnHome: true,
           homeOrder: card.index + 1,
           homeFeatured: card.slots[0] || '',
           homeSecondary: card.slots.slice(1).map((id) => String(id || '').trim()).filter(Boolean),
-        })
+        }
+
+        if (card.sub?._id) {
+          await api.updateSubcategory(card.sub._id, payload)
+        } else {
+          await api.createSubcategory(payload)
+        }
       }
+
+      const [freshSubs, freshPosts] = await Promise.all([
+        api.getAllSubcategories(),
+        api.getAdminArticles().catch(() => api.getArticles({ limit: '80' })),
+      ])
+      const pub = publishedPosts(freshPosts)
+      setPosts(pub)
+      const next = buildCards(freshSubs, pub)
+      setCards(next)
+      setSaved(JSON.parse(JSON.stringify(next)))
+
       await refreshSiteData().catch(() => {})
-      const next = JSON.parse(JSON.stringify(cards))
-      setSaved(next)
       setMessage(isEn ? 'Homepage arrangement saved' : 'হোমপেজ সাজানো সংরক্ষণ হয়েছে')
       setTimeout(() => setMessage(''), 2500)
     } catch (err) {
