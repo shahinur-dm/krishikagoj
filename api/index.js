@@ -14,6 +14,12 @@ async function handler(req, res) {
     }
     return
   }
+
+  // Ensure req.url starts with /api so Express routes always match under Vercel serverless functions
+  if (req.url && !req.url.startsWith('/api')) {
+    req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`
+  }
+
   return app(req, res)
 }
 

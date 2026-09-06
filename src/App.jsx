@@ -13,6 +13,7 @@ import VideosPage from './pages/VideosPage'
 import PhotosPage from './pages/PhotosPage'
 import LoginPage from './pages/admin/LoginPage'
 import './styles/global.css'
+import './styles/admin.css'
 
 const RegisterPage = lazy(() => import('./pages/admin/RegisterPage'))
 const HomeLeadPage = lazy(() => import('./pages/admin/HomeLeadPage'))
