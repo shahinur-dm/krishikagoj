@@ -159,8 +159,8 @@ export default function LeadSection({
   }
 
   const customStoryTitle = isEn
-    ? (settings?.newsStoriesTitleEn || settings?.newsStoriesTitle || settings?.newsStoriesTitleBn)
-    : (settings?.newsStoriesTitle || settings?.newsStoriesTitleBn)
+    ? (settings?.newsStoriesTitleEn || settings?.newsStandingTitle || settings?.newsStoriesTitle || settings?.newsStoriesTitleBn)
+    : (settings?.newsStandingTitle || settings?.newsStoriesTitle || settings?.newsStoriesTitleBn)
   const storyTitle = (customStoryTitle && String(customStoryTitle).trim()) || t.newsStories || 'নিউজ স্টোরিজ'
 
   return (

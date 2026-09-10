@@ -20,7 +20,8 @@ export default function WebsiteSettingsPage() {
       await save({
         siteName: settings.siteName,
         tagline: settings.tagline,
-        newsStoriesTitle: settings.newsStoriesTitle,
+        newsStoriesTitle: (settings.newsStoriesTitle || settings.newsStandingTitle || '').trim(),
+        newsStandingTitle: (settings.newsStandingTitle || settings.newsStoriesTitle || '').trim(),
         newsStoriesTitleEn: settings.newsStoriesTitleEn,
         hotline: settings.hotline,
         logo: settings.logo,
