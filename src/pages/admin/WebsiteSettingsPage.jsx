@@ -20,6 +20,8 @@ export default function WebsiteSettingsPage() {
       await save({
         siteName: settings.siteName,
         tagline: settings.tagline,
+        newsStoriesTitle: settings.newsStoriesTitle,
+        newsStoriesTitleEn: settings.newsStoriesTitleEn,
         hotline: settings.hotline,
         logo: settings.logo,
         mobileLogo: settings.mobileLogo,
@@ -53,6 +55,7 @@ export default function WebsiteSettingsPage() {
   const textFields = [
     ['siteName', 'সাইটের নাম'],
     ['tagline', 'ট্যাগলাইন'],
+    ['newsStoriesTitle', 'নিউজ স্টোরিজ সেকশন শিরোনাম (Section Title)'],
     ['hotline', 'হটলাইন'],
     ['email', 'ইমেইল'],
     ['phoneBn', 'ফোন (বাংলা)'],

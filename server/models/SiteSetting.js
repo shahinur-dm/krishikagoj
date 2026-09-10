@@ -15,6 +15,9 @@ const siteSettingSchema = new mongoose.Schema(
     breakingTitle: { type: String, default: 'ব্রেকিং নিউজ' },
     breakingTitleBn: { type: String, default: 'ব্রেকিং নিউজ' },
     breakingTitleEn: { type: String, default: 'Breaking News' },
+    newsStoriesTitle: { type: String, default: 'নিউজ স্টোরিজ' },
+    newsStoriesTitleBn: { type: String, default: 'নিউজ স্টোরিজ' },
+    newsStoriesTitleEn: { type: String, default: 'News Stories' },
     homepageLayout: { type: String, default: 'dynamic' },
     homepageSlots: {
       lead: { type: String, default: '' },

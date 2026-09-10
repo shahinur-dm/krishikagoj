@@ -142,6 +142,7 @@ export default function HomeLeadPage() {
   const [settingsDoc, setSettingsDoc] = useState(null)
   const [articles, setArticles] = useState([])
   const [slots, setSlots] = useState(EMPTY)
+  const [storyTitle, setStoryTitle] = useState('নিউজ স্টোরিজ')
   const [items, setItems] = useState([])
   const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
@@ -233,6 +234,7 @@ export default function HomeLeadPage() {
         const mapped = (rows || []).map(mapArticle).filter(Boolean)
         setArticles(mapped)
         setSettingsDoc(settings || {})
+        setStoryTitle(settings?.newsStoriesTitle || settings?.newsStoriesTitleBn || 'নিউজ স্টোরিজ')
 
         if (pageKey === 'home') {
           const saved = settings?.homepageSlots
@@ -355,7 +357,10 @@ export default function HomeLeadPage() {
         const ids = [slots.lead, slots.story, ...slots.grid, ...slots.mid, ...slots.storyList].filter(Boolean)
         const dup = ids.filter((id, i) => ids.indexOf(id) !== i)
         if (dup.length) throw new Error('একই খবর একাধিক পজিশনে রাখা যাবে না')
-        await api.updateSettings({ homepageSlots: cloneSlots(slots) })
+        await api.updateSettings({
+          homepageSlots: cloneSlots(slots),
+          newsStoriesTitle: storyTitle.trim() || 'নিউজ স্টোরিজ',
+        })
         setMessage('সেভ হয়েছে — হোমপেজে এই পজিশনেই খবর দেখাবে')
       } else {
         const ids = items.filter(Boolean)
@@ -478,7 +483,17 @@ export default function HomeLeadPage() {
         </div>
 
         <div className="hl-col hl-col-story">
-          <div className="hl-story-head">নিউজ স্টোরিজ</div>
+          <div className="hl-story-head" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569', whiteSpace: 'nowrap' }}>সেকশন নাম:</span>
+            <input
+              type="text"
+              className="admin-input"
+              style={{ padding: '3px 8px', fontSize: '13px', borderRadius: '4px', border: '1px solid #cbd5e1', flex: 1, fontWeight: 600, color: '#0f172a' }}
+              value={storyTitle}
+              onChange={(e) => setStoryTitle(e.target.value)}
+              placeholder="নিউজ স্টোরিজ"
+            />
+          </div>
           <SlotCard
             article={art(slots.story)}
             label="ডান বড় খবর"

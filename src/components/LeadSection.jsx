@@ -2,6 +2,7 @@ import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import SafeImage from './SafeImage'
 import { useLang } from '../context/LanguageContext'
+import { useSiteData } from '../context/SiteDataContext'
 
 /** 3 equal-height columns: left grid | mid list | news stories */
 const GRID_COUNT = 6
@@ -140,7 +141,8 @@ export default function LeadSection({
   recent = [],
   leadLayout = null,
 }) {
-  const { t, text } = useLang()
+  const { t, text, isEn } = useLang()
+  const { settings } = useSiteData()
   const slots = resolveSlots(leadLayout, featured, headlines, latest, popular, recent)
   if (!slots.lead && !slots.story && !slots.grid.length) return null
   const labelOf = (item) => (item ? text(item.title, item.titleEn) : '')
@@ -155,6 +157,11 @@ export default function LeadSection({
     }
     return exc || ''
   }
+
+  const customStoryTitle = isEn
+    ? (settings?.newsStoriesTitleEn || settings?.newsStoriesTitle || settings?.newsStoriesTitleBn)
+    : (settings?.newsStoriesTitle || settings?.newsStoriesTitleBn)
+  const storyTitle = (customStoryTitle && String(customStoryTitle).trim()) || t.newsStories || 'নিউজ স্টোরিজ'
 
   return (
     <section className="heading-section mt-4" id="top-lead-content">
@@ -224,7 +231,7 @@ export default function LeadSection({
           <div className="lead-3col-col lead-3col-story">
             <div className="common-border-box lead-3col-box lead-side-panel lead-side-story">
               <div className="section-title-flex">
-                <h3>{t.newsStories}</h3>
+                <h3>{storyTitle}</h3>
               </div>
               {slots.story ? (
                 <div className="news-md-grid lead-side-story-hero">
