@@ -11,9 +11,9 @@
   ],
   "headers": [
     {
-      "source": "/api/home",
+      "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, s-maxage=300, stale-while-revalidate=600" }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
     },
     {

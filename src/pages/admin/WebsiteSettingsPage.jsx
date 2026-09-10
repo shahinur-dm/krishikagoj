@@ -55,7 +55,7 @@ export default function WebsiteSettingsPage() {
   const textFields = [
     ['siteName', 'সাইটের নাম'],
     ['tagline', 'ট্যাগলাইন'],
-    ['newsStoriesTitle', 'নিউজ স্টোরিজ সেকশন শিরোনাম (Section Title)'],
+    ['newsStoriesTitle', 'নিউজ স্ট্যান্ডিং সেকশন শিরোনাম (Section Title)'],
     ['hotline', 'হটলাইন'],
     ['email', 'ইমেইল'],
     ['phoneBn', 'ফোন (বাংলা)'],
