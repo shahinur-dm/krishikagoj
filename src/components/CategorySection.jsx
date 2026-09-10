@@ -83,6 +83,8 @@ function sectionTopicIcon(slug, title) {
 }
 
 function SectionHead({ title, slug }) {
+  const { t, text } = useLang()
+  const displayTitle = text(title, '')
   return (
     <div className="section-title-flex">
       <div className="d-flex align-items-center">
@@ -91,12 +93,12 @@ function SectionHead({ title, slug }) {
           aria-hidden="true"
         />
         <h3>
-          {slug ? <Link to={`/category/${slug}`}>{title}</Link> : title}
+          {slug ? <Link to={`/category/${slug}`}>{displayTitle}</Link> : displayTitle}
         </h3>
       </div>
       {slug && (
         <Link to={`/category/${slug}`}>
-          আরো দেখুন <i className="fa-solid fa-circle-chevron-right ms-1" />
+          {t.seeMore} <i className="fa-solid fa-circle-chevron-right ms-1" />
         </Link>
       )}
     </div>
@@ -330,10 +332,10 @@ function CategoryMotamot({ title, slug, articles = [], embedded = false }) {
   const list = (
     <div className="motamot-side-list">
       <div className="motamot-side-head">
-        <h3>{slug ? <Link to={`/category/${slug}`}>{title}</Link> : title}</h3>
+        <h3>{slug ? <Link to={`/category/${slug}`}>{text(title, '')}</Link> : text(title, '')}</h3>
         {slug ? (
           <Link to={`/category/${slug}`} className="motamot-side-more">
-            আরও দেখুন <i className="fa-solid fa-arrow-right" />
+            {t.seeMore} <i className="fa-solid fa-arrow-right" />
           </Link>
         ) : null}
       </div>
@@ -345,10 +347,10 @@ function CategoryMotamot({ title, slug, articles = [], embedded = false }) {
               <OpinionAvatar meta={meta} alt={meta.name} />
             </span>
             <span className="motamot-side-copy">
-              <em>{opinionLabel(item, title)}</em>
+              <em>{text(opinionLabel(item, title), '')}</em>
               <h4 className="title">{text(item.title, item.titleEn)}</h4>
               <span className="motamot-side-meta">
-                লেখক: {meta.name}
+                {t.author} {meta.name}
                 {item.date ? ` · ${item.date}` : ''}
               </span>
             </span>

@@ -268,6 +268,9 @@ export const api = {
     if (!res.ok) throw new Error(data.message || `Upload failed (${res.status})`)
     return data
   },
+
+  translateArticle: (body) => request('/translate/article', { method: 'POST', body: JSON.stringify(body) }),
+  translateText: (body) => request('/translate/text', { method: 'POST', body: JSON.stringify(body) }),
 }
 
 export function articlePath(article) {
@@ -276,13 +279,26 @@ export function articlePath(article) {
   return `/news/${slug}`
 }
 
-export function formatBnDate(value) {
+export function formatBnDate(value, lang = 'bn') {
   if (!value) return ''
   try {
-    return new Intl.DateTimeFormat('bn-BD', {
+    return new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'bn-BD', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
+    }).format(new Date(value))
+  } catch {
+    return ''
+  }
+}
+
+export function formatBnTime(value, lang = 'bn') {
+  if (!value) return ''
+  try {
+    return new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : 'bn-BD', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: lang === 'en',
     }).format(new Date(value))
   } catch {
     return ''

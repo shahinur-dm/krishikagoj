@@ -42,13 +42,15 @@ function ListIcon() {
 }
 
 function ArticleMeta({ item, fallbackAuthor }) {
+  const { lang } = useLang()
+  const dateStr = item.publishedAt ? formatBnDate(item.publishedAt, lang) : item.date
   return (
     <div className="eb-news-meta">
       <span>{item.author || fallbackAuthor}</span>
-      {item.date && (
+      {dateStr && (
         <>
           <CalendarIcon />
-          <span>{item.date}</span>
+          <span>{dateStr}</span>
         </>
       )}
       <EyeIcon />
@@ -139,33 +141,33 @@ export default function CategoryPage() {
   if (error || !category) {
     return (
       <div className="container py-5 text-center">
-        <h1>ক্যাটাগরি পাওয়া যায়নি</h1>
+        <h1>{t.categoryNotFound}</h1>
         <p>{error || ''}</p>
-        <Link to="/">প্রচ্ছদে ফিরে যান</Link>
+        <Link to="/">{t.returnHome}</Link>
       </div>
     )
   }
 
   const siteName = settings?.siteName || 'কৃষিকাগজ'
   const catName = text(category.name, category.nameEn)
-  const pageTitle = `${category.name} | ${siteName}`
+  const pageTitle = `${catName} | ${siteName}`
   const pageDesc =
     settings?.seo?.metaDescription ||
-    `${category.name} বিভাগের সর্বশেষ কৃষি খবর — ${siteName}`
+    `${catName} — ${siteName}`
 
   return (
     <>
       <SeoHead
         title={pageTitle}
         description={pageDesc}
-        keywords={`${category.name}, ${settings?.seo?.metaKeyword || ''}`}
+        keywords={`${catName}, ${settings?.seo?.metaKeyword || ''}`}
         image={items[0]?.image || settings?.seo?.ogImage || settings?.logo}
         siteName={siteName}
         type="website"
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'CollectionPage',
-          name: category.name,
+          name: catName,
           description: pageDesc,
         }}
       />
@@ -189,7 +191,7 @@ export default function CategoryPage() {
                 type="button"
                 className={view === 'card' ? 'active' : ''}
                 onClick={() => setView('card')}
-                aria-label="গ্রিড ভিউ"
+                aria-label="Grid View"
               >
                 <CardIcon />
               </button>
@@ -197,7 +199,7 @@ export default function CategoryPage() {
                 type="button"
                 className={view === 'list' ? 'active' : ''}
                 onClick={() => setView('list')}
-                aria-label="লিস্ট ভিউ"
+                aria-label="List View"
               >
                 <ListIcon />
               </button>
@@ -224,7 +226,7 @@ export default function CategoryPage() {
             </ul>
           )}
 
-          {!items.length && <p className="eb-empty">এই বিভাগে এখনো খবর যোগ হয়নি।</p>}
+          {!items.length && <p className="eb-empty">{t.categoryEmpty}</p>}
 
           {view === 'card' ? (
             <div className="eb-card-grid">
@@ -273,7 +275,7 @@ export default function CategoryPage() {
                     {loadingMore ? t.loading : t.more}
                   </button>
               ) : (
-                <p className="eb-no-more">আর কোনো খবর নেই</p>
+                <p className="eb-no-more">{t.noMoreArticles}</p>
               )}
             </div>
           )}
@@ -281,7 +283,7 @@ export default function CategoryPage() {
 
         <aside className="eb-cat-side">
           <section className="eb-side-box">
-            <div className="eb-side-head">সর্বাধিক পঠিত</div>
+            <div className="eb-side-head">{t.mostRead}</div>
             <div className="eb-side-list">
               {popular.map((item) => (
                 <div className="eb-side-item" key={item.id}>

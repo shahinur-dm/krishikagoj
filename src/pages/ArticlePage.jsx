@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, mapArticle } from '../api/client'
+import { api, formatBnDate, formatBnTime, mapArticle } from '../api/client'
 import Sidebar from '../components/Sidebar'
 import SafeImage from '../components/SafeImage'
 import SeoHead from '../components/SeoHead'
@@ -25,35 +25,25 @@ function mediaUrl(img) {
   return `${MEDIA_BASE}${src.startsWith('/') ? src : `/${src}`}`
 }
 
-function formatBnTime(value) {
-  if (!value) return ''
-  try {
-    return new Intl.DateTimeFormat('bn-BD', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(new Date(value))
-  } catch {
-    return ''
-  }
-}
-
 function PostMeta({ article, authorName }) {
-  const time = formatBnTime(article.publishedAt)
-  const published = [article.date, time].filter(Boolean).join(' ')
+  const { t, lang, text } = useLang()
+  const time = formatBnTime(article.publishedAt, lang)
+  const dateStr = formatBnDate(article.publishedAt, lang)
+  const published = [dateStr, time].filter(Boolean).join(' ')
+  const authorLabel = text(authorName, authorName === 'কৃষি ডেস্ক' ? 'Krishi Desk' : authorName)
 
   return (
     <div className="kk-post-meta-inline">
-      {authorName ? (
+      {authorLabel ? (
         <div className="kk-journalist">
           <i className="fa-solid fa-circle-user" aria-hidden="true" />
-          <span>{authorName}</span>
+          <span>{authorLabel}</span>
         </div>
       ) : null}
       {published ? (
         <div className="kk-publish">
           <i className="fa-regular fa-clock" aria-hidden="true" />
-          <span>প্রকাশ: {published}</span>
+          <span>{t.publishedOn} {published}</span>
         </div>
       ) : null}
     </div>
@@ -61,6 +51,7 @@ function PostMeta({ article, authorName }) {
 }
 
 function ShareRow({ url, title, onFontChange }) {
+  const { t } = useLang()
   const [copied, setCopied] = useState(false)
 
   async function copyLink() {
@@ -124,7 +115,8 @@ function ShareRow({ url, title, onFontChange }) {
         <button
           type="button"
           className="kk-share-btn kk-share-copy"
-          aria-label="লিংক কপি"
+          aria-label={t.copyLink}
+          title={t.copyLink}
           onClick={copyLink}
         >
           <i className={copied ? 'fa-solid fa-check' : 'fa-regular fa-copy'} />
@@ -132,18 +124,19 @@ function ShareRow({ url, title, onFontChange }) {
         <button
           type="button"
           className="kk-share-btn kk-share-print"
-          aria-label="প্রিন্ট"
+          aria-label={t.print}
+          title={t.print}
           onClick={() => window.print()}
         >
           <i className="fa-solid fa-print" />
         </button>
-        {copied && <span className="kk-copied">কপি হয়েছে</span>}
+        {copied && <span className="kk-copied">{t.copied}</span>}
       </div>
       <div className="kk-font-btns">
-        <button type="button" onClick={() => onFontChange(1)} aria-label="ফন্ট বড় করুন">
+        <button type="button" onClick={() => onFontChange(1)} aria-label={t.fontBigger} title={t.fontBigger}>
           A+
         </button>
-        <button type="button" onClick={() => onFontChange(-1)} aria-label="ফন্ট ছোট করুন">
+        <button type="button" onClick={() => onFontChange(-1)} aria-label={t.fontSmaller} title={t.fontSmaller}>
           A-
         </button>
       </div>
@@ -153,13 +146,14 @@ function ShareRow({ url, title, onFontChange }) {
 
 function ArticleLeftRail({ currentId }) {
   const { latest } = useSiteData()
+  const { t, text, lang } = useLang()
   const items = (latest || []).filter((item) => item.id !== currentId).slice(0, 8)
 
   return (
     <aside className="kk-post-left">
       <div className="common-border-box">
         <div className="section-title-flex">
-          <h3>সর্বশেষ</h3>
+          <h3>{t.latest}</h3>
         </div>
         {items.map((item) => (
           <div className="news-list kk-left-item" key={item.id}>
@@ -167,12 +161,12 @@ function ArticleLeftRail({ currentId }) {
               <div className="kk-left-item-row">
                 <div className="kk-left-thumb">
                   <div className="img-zoom-hover">
-                    <SafeImage src={item.image} alt={item.title} width={160} />
+                    <SafeImage src={item.image} alt={text(item.title, item.titleEn)} width={160} />
                   </div>
                 </div>
                 <div className="kk-left-text">
-                  <h4 className="title">{item.title}</h4>
-                  {item.date ? <span>{item.date}</span> : null}
+                  <h4 className="title">{text(item.title, item.titleEn)}</h4>
+                  {item.publishedAt ? <span>{formatBnDate(item.publishedAt, lang)}</span> : null}
                 </div>
               </div>
             </Link>
@@ -253,7 +247,7 @@ function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT,
 
               {gallery.length > 0 && (
                 <div className="kk-post-gallery">
-                  <h4>ফটো গ্যালারি</h4>
+                  <h4>{t.photoGallery}</h4>
                   <div className="kk-post-gallery-grid">
                     {gallery.map((img, i) => (
                       <a key={i} href={mediaUrl(img)} target="_blank" rel="noreferrer">
@@ -291,6 +285,7 @@ function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT,
 export default function ArticlePage() {
   const { id } = useParams()
   const { settings, ads } = useSiteData()
+  const { t, isEn, text } = useLang()
   const [article, setArticle] = useState(null)
   const [nextArticles, setNextArticles] = useState([])
   const [loading, setLoading] = useState(true)
@@ -393,6 +388,49 @@ export default function ArticlePage() {
     }
   }, [id])
 
+  // Automatically trigger backend translation when English mode is active and translation is missing
+  useEffect(() => {
+    if (!isEn || !article?.id) return
+    if (article.bodyEn && article.titleEn) return
+
+    let cancelled = false
+    api.translateArticle({ idOrSlug: article.id })
+      .then((res) => {
+        if (cancelled || !res) return
+        setArticle((prev) => {
+          if (!prev || prev.id !== article.id) return prev
+          return {
+            ...prev,
+            titleEn: res.titleEn || prev.titleEn,
+            excerptEn: res.excerptEn || prev.excerptEn,
+            bodyEn: res.bodyEn || prev.bodyEn,
+          }
+        })
+      })
+      .catch((err) => console.warn('Auto translation fetch failed:', err.message))
+
+    return () => {
+      cancelled = true
+    }
+  }, [isEn, article?.id, article?.bodyEn, article?.titleEn])
+
+  // Also translate any feed articles if in English mode
+  useEffect(() => {
+    if (!isEn || !nextArticles.length) return
+    nextArticles.forEach((item) => {
+      if (!item.bodyEn && item.id) {
+        api.translateArticle({ idOrSlug: item.id })
+          .then((res) => {
+            if (!res) return
+            setNextArticles((prev) =>
+              prev.map((a) => (a.id === item.id ? { ...a, titleEn: res.titleEn || a.titleEn, excerptEn: res.excerptEn || a.excerptEn, bodyEn: res.bodyEn || a.bodyEn } : a)),
+            )
+          })
+          .catch(() => {})
+      }
+    })
+  }, [isEn, nextArticles])
+
   useEffect(() => {
     const el = sentinelRef.current
     if (!el || loading || noMore) return undefined
@@ -407,31 +445,33 @@ export default function ArticlePage() {
     return () => io.disconnect()
   }, [loading, noMore, loadNextArticle, nextArticles.length])
 
-  if (loading) return <div className="container eb-loading">লোড হচ্ছে...</div>
+  if (loading) return <div className="container eb-loading">{t.loading}</div>
 
   if (error || !article) {
     return (
       <div className="container py-5 text-center">
-        <p>{error || 'খবরটি পাওয়া যায়নি'}</p>
-        <Link to="/">প্রচ্ছদে ফিরে যান</Link>
+        <p>{error || t.articleNotFound}</p>
+        <Link to="/">{t.returnHome}</Link>
       </div>
     )
   }
 
   const siteName = settings?.siteName || 'কৃষিকাগজ'
-  const desc = (article.metaDescription || article.excerpt || '')
+  const activeTitle = text(article.title, article.titleEn)
+  const activeExcerpt = text(article.excerpt, article.excerptEn)
+  const desc = (article.metaDescription || activeExcerpt || '')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 160)
-  const keywords = [article.categoryName, article.tags, settings?.seo?.metaKeyword]
+  const keywords = [text(article.categoryName, article.categoryNameEn), article.tags, settings?.seo?.metaKeyword]
     .filter(Boolean)
     .join(', ')
 
   return (
     <div className="kk-article-page" style={{ '--post-font': `${fontSize}px` }}>
       <SeoHead
-        title={`${article.title} | ${siteName}`}
-        description={desc || settings?.seo?.metaDescription || article.title}
+        title={`${activeTitle} | ${siteName}`}
+        description={desc || settings?.seo?.metaDescription || activeTitle}
         keywords={keywords}
         author={article.author || settings?.seo?.metaAuthor || siteName}
         image={article.image || settings?.seo?.ogImage || settings?.logo}
@@ -445,8 +485,8 @@ export default function ArticlePage() {
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'NewsArticle',
-          headline: article.title,
-          description: desc || article.title,
+          headline: activeTitle,
+          description: desc || activeTitle,
           image: article.image ? [article.image] : undefined,
           datePublished: article.publishedAt,
           author: { '@type': 'Person', name: article.author || siteName },
@@ -456,7 +496,7 @@ export default function ArticlePage() {
             logo: { '@type': 'ImageObject', url: settings?.logo || '/logo.png' },
           },
           mainEntityOfPage: article.path,
-          articleSection: article.categoryName || undefined,
+          articleSection: text(article.categoryName, article.categoryNameEn) || undefined,
           keywords: keywords || undefined,
         }}
       />
@@ -482,10 +522,10 @@ export default function ArticlePage() {
       <div ref={sentinelRef} className="kk-feed-sentinel" aria-hidden="true" />
       <p className="kk-feed-status">
         {noMore
-          ? 'আর কোনো খবর নেই'
+          ? t.noMoreArticles
           : loadingMore
-            ? 'পরের খবর লোড হচ্ছে...'
-            : 'স্ক্রল করুন — পরের খবর আসতে থাকবে'}
+            ? t.loadingNextArticle
+            : t.scrollForMore}
       </p>
     </div>
   )

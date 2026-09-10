@@ -10,6 +10,7 @@ import { cacheDel, cacheGet, cacheSet } from '../utils/cache.js'
 import { applyArticleSeoDefaults, slugify } from '../utils/seoContent.js'
 import Opinion from '../models/Opinion.js'
 import SiteSetting from '../models/SiteSetting.js'
+import { translateArticleFields } from '../utils/translator.js'
 
 const router = Router()
 
@@ -687,6 +688,22 @@ router.get('/:idOrSlug', async (req, res) => {
       Article.updateOne({ _id: article._id }, { $inc: { views: 1 } }).exec().catch(() => {})
     }
 
+    if (req.query.lang === 'en' && article && article._id && !article.bodyEn && article.body) {
+      try {
+        const trans = await translateArticleFields({
+          title: article.title,
+          excerpt: article.excerpt,
+          body: article.body,
+        })
+        if (trans.titleEn) article.titleEn = trans.titleEn
+        if (trans.excerptEn) article.excerptEn = trans.excerptEn
+        if (trans.bodyEn) article.bodyEn = trans.bodyEn
+        Article.updateOne({ _id: article._id }, { $set: trans }).exec().catch(() => {})
+      } catch (transErr) {
+        console.warn('On-demand translation failed:', transErr.message)
+      }
+    }
+
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
     res.set('Pragma', 'no-cache')
     res.set('Expires', '0')
@@ -704,6 +721,21 @@ router.post('/', requireAuth, requirePermission('post'), async (req, res) => {
     if (!data.category) return res.status(400).json({ message: 'Category is required' })
     data.subcategory = (await assertSubcategoryBelongs(data.category, data.subcategory || null)) || undefined
     if (!data.subcategory) delete data.subcategory
+
+    if (data.title && (!data.titleEn || !data.bodyEn)) {
+      try {
+        const trans = await translateArticleFields({
+          title: data.title,
+          excerpt: data.excerpt,
+          body: data.body,
+        })
+        if (!data.titleEn && trans.titleEn) data.titleEn = trans.titleEn
+        if (!data.excerptEn && trans.excerptEn) data.excerptEn = trans.excerptEn
+        if (!data.bodyEn && trans.bodyEn) data.bodyEn = trans.bodyEn
+      } catch (tErr) {
+        console.warn('Auto translation on create article failed:', tErr.message)
+      }
+    }
 
     const article = await Article.create(data)
     const populated = await populateArticle(Article.findById(article._id)).lean()
@@ -737,6 +769,24 @@ router.put('/:id', requireAuth, requirePermission('post'), async (req, res) => {
         data.subcategory = null
       } else if (data.subcategory) {
         data.subcategory = await assertSubcategoryBelongs(categoryId, data.subcategory)
+      }
+    }
+
+    const titleChanged = data.title && data.title !== existing.title
+    const bodyChanged = data.body && data.body !== existing.body
+    const excerptChanged = data.excerpt !== undefined && data.excerpt !== existing.excerpt
+    if (titleChanged || bodyChanged || excerptChanged || (!existing.titleEn && (data.title || existing.title))) {
+      try {
+        const trans = await translateArticleFields({
+          title: data.title || existing.title,
+          excerpt: data.excerpt !== undefined ? data.excerpt : existing.excerpt,
+          body: data.body || existing.body,
+        })
+        if (trans.titleEn && (!data.titleEn || titleChanged)) data.titleEn = trans.titleEn
+        if (trans.excerptEn && (!data.excerptEn || excerptChanged)) data.excerptEn = trans.excerptEn
+        if (trans.bodyEn && (!data.bodyEn || bodyChanged)) data.bodyEn = trans.bodyEn
+      } catch (tErr) {
+        console.warn('Auto translation on update article failed:', tErr.message)
       }
     }
 

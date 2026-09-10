@@ -96,9 +96,9 @@ export default function Footer() {
                   <span>{settings?.email || 'info@krishikagoj.com'}</span>
                 </div>
                 <div className="pt-2 border-top" style={{ borderColor: 'rgba(255,255,255,0.05) !important' }}>
-                  <small className="d-block mb-1"><strong>প্রধান উপদেষ্টা:</strong> {settings?.chiefAdvisor || '—'}</small>
-                  <small className="d-block mb-1"><strong>প্রকাশক:</strong> {settings?.publisher || '—'}</small>
-                  <small className="d-block mb-1"><strong>সম্পাদক:</strong> {settings?.managingEditor || '—'}</small>
+                  <small className="d-block mb-1"><strong>{t.chiefAdvisor}</strong> {settings?.chiefAdvisor || '—'}</small>
+                  <small className="d-block mb-1"><strong>{t.publisher}</strong> {settings?.publisher || '—'}</small>
+                  <small className="d-block mb-1"><strong>{t.editor}</strong> {settings?.managingEditor || '—'}</small>
                 </div>
               </address>
             </div>
@@ -107,7 +107,7 @@ export default function Footer() {
 
         <div className="container mt-4 pt-3 border-top text-center" style={{ borderColor: 'rgba(255,255,255,0.1) !important' }}>
           <p className="mb-0 small text-uppercase" style={{ letterSpacing: '0.5px' }}>
-            © {new Date().getFullYear()} সকল স্বত্ব সংরক্ষিত <span style={{ color: 'var(--bs-primary)', fontWeight: 'bold' }}>{settings?.siteName || 'কৃষিকাগজ'}</span> | অনুমতি ছাড়া কপি করা দণ্ডনীয়
+            © {new Date().getFullYear()} {t.allRightsReserved} <span style={{ color: 'var(--bs-primary)', fontWeight: 'bold' }}>{settings?.siteName || 'কৃষিকাগজ'}</span> | {t.unauthorizedCopying}
           </p>
         </div>
       </footer>

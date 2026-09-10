@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSiteData } from '../context/SiteDataContext'
+import { useLang } from '../context/LanguageContext'
 
 const BN_NUM = ['১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯', '১০', '১১', '১২']
 
@@ -11,6 +12,7 @@ export default function Sidebar({
   compact = false,
 }) {
   const site = useSiteData()
+  const { t, text, isEn } = useLang()
   const [tab, setTab] = useState('latest')
 
   const latest = latestProp?.length ? latestProp : site.latest || []
@@ -26,12 +28,12 @@ export default function Sidebar({
   )
 
   const namaz = settings?.namaz || {
-    fajr: '৫:৩০',
-    johor: '১:৩০',
-    asor: '৪:০০',
-    magrib: '৬:০০',
-    esha: '৭:৩০',
-    jummah: '১:৪০',
+    fajr: isEn ? '5:30 AM' : '৫:৩০',
+    johor: isEn ? '1:30 PM' : '১:৩০',
+    asor: isEn ? '4:00 PM' : '৪:০০',
+    magrib: isEn ? '6:00 PM' : '৬:০০',
+    esha: isEn ? '7:30 PM' : '৭:৩০',
+    jummah: isEn ? '1:40 PM' : '১:৪০',
   }
 
   return (
@@ -44,7 +46,7 @@ export default function Sidebar({
               className={`nav-link${tab === 'latest' ? ' active' : ''}`}
               onClick={() => setTab('latest')}
             >
-              সর্বশেষ
+              {t.latest}
             </button>
           </li>
           <li className="nav-item" role="presentation">
@@ -53,7 +55,7 @@ export default function Sidebar({
               className={`nav-link${tab === 'popular' ? ' active' : ''}`}
               onClick={() => setTab('popular')}
             >
-              জনপ্রিয়
+              {t.popular}
             </button>
           </li>
         </ul>
@@ -62,9 +64,9 @@ export default function Sidebar({
             <div className="news-list" key={item.id}>
               <Link to={item.path || `/news/${item.slug || item.id}`}>
                 <div className="d-flex">
-                  <div className="number-badge">{BN_NUM[i] || i + 1}</div>
+                  <div className="number-badge">{isEn ? i + 1 : (BN_NUM[i] || i + 1)}</div>
                   <div className="ms-2">
-                    <h4 className="title">{item.title}</h4>
+                    <h4 className="title">{text(item.title, item.titleEn)}</h4>
                   </div>
                 </div>
               </Link>
@@ -80,23 +82,23 @@ export default function Sidebar({
               <div className="section-title-flex">
                 <h3>
                   <i className="fa-solid fa-layer-group kk-topic-icon" style={{ marginRight: '6px', color: '#16a34a' }} />
-                  টপিক সমূহ
+                  {t.topics}
                 </h3>
               </div>
               <div className="p-2" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {site.layoutTopics
                   .filter((t) => t.isActive !== false)
-                  .map((t) => {
+                  .map((tItem) => {
                     const toUrl =
-                      t.url ||
-                      (t.category?.slug
-                        ? `/category/${t.category.slug}`
-                        : t.slug
-                          ? `/category/${t.slug}`
+                      tItem.url ||
+                      (tItem.category?.slug
+                        ? `/category/${tItem.category.slug}`
+                        : tItem.slug
+                          ? `/category/${tItem.slug}`
                           : '#')
                     return (
                       <Link
-                        key={t._id}
+                        key={tItem._id}
                         to={toUrl}
                         style={{
                           background: '#f8fafc',
@@ -112,8 +114,8 @@ export default function Sidebar({
                           textDecoration: 'none',
                         }}
                       >
-                        <i className={t.icon || 'fa-solid fa-leaf'} style={{ color: '#16a34a', fontSize: '11px' }} />
-                        {t.title}
+                        <i className={tItem.icon || 'fa-solid fa-leaf'} style={{ color: '#16a34a', fontSize: '11px' }} />
+                        {text(tItem.title, tItem.titleEn)}
                       </Link>
                     )
                   })}
@@ -124,39 +126,39 @@ export default function Sidebar({
           {settings?.facebookPage && (
             <div className="common-border-box mb-3 p-3 d-none d-lg-block">
               <a href={settings.facebookPage} target="_blank" rel="noreferrer" className="fb-link-btn">
-                ফেসবুক পেজ দেখুন
+                {t.visitFacebook}
               </a>
             </div>
           )}
           <div className="common-border-box mb-3 d-none d-md-block">
             <div className="section-title-flex">
-              <h3>নামাজের সময়সূচী</h3>
+              <h3>{t.namazSchedule}</h3>
             </div>
             <div className="p-2">
               <table className="namaz-table">
                 <tbody>
                   <tr>
-                    <td>ফজর</td>
+                    <td>{t.fajr}</td>
                     <td>{namaz.fajr}</td>
                   </tr>
                   <tr>
-                    <td>যোহর</td>
+                    <td>{t.johor}</td>
                     <td>{namaz.johor}</td>
                   </tr>
                   <tr>
-                    <td>আছর</td>
+                    <td>{t.asor}</td>
                     <td>{namaz.asor}</td>
                   </tr>
                   <tr>
-                    <td>মাগরিব</td>
+                    <td>{t.magrib}</td>
                     <td>{namaz.magrib}</td>
                   </tr>
                   <tr>
-                    <td>এশা</td>
+                    <td>{t.esha}</td>
                     <td>{namaz.esha}</td>
                   </tr>
                   <tr>
-                    <td>জুম্মা</td>
+                    <td>{t.jummah}</td>
                     <td>{namaz.jummah}</td>
                   </tr>
                 </tbody>
@@ -165,7 +167,7 @@ export default function Sidebar({
           </div>
           <div className="common-border-box">
             <div className="section-title-flex">
-              <h3>কৃষকের হটলাইন</h3>
+              <h3>{t.hotlineTitle}</h3>
             </div>
             <div className="p-3">
               <p className="hotline-num">{settings?.hotline || '১৬১২৩'}</p>
