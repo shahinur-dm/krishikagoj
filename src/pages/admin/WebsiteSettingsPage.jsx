@@ -75,7 +75,11 @@ export default function WebsiteSettingsPage() {
         {textFields.map(([key, label]) => (
           <div key={key} className="admin-form-group">
             <label>{label}</label>
-            <input value={settings[key] || ''} onChange={(e) => updateField(key, e.target.value)} />
+            <input
+              value={settings[key] ?? (key === 'newsStoriesTitle' ? 'নিউজ স্টোরিজ' : '')}
+              onChange={(e) => updateField(key, e.target.value)}
+              placeholder={key === 'newsStoriesTitle' ? 'নিউজ স্টোরিজ' : ''}
+            />
           </div>
         ))}
       </div>

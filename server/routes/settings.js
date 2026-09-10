@@ -20,6 +20,9 @@ router.get('/', async (_req, res) => {
       settings = created.toObject()
     }
     if (settings) {
+      if (!settings.newsStoriesTitle) settings.newsStoriesTitle = settings.newsStoriesTitleBn || 'নিউজ স্টোরিজ'
+      if (!settings.newsStoriesTitleBn) settings.newsStoriesTitleBn = settings.newsStoriesTitle || 'নিউজ স্টোরিজ'
+      if (!settings.newsStoriesTitleEn) settings.newsStoriesTitleEn = 'News Stories'
       delete settings.aiWriter
       delete settings.facebookPageAccessToken
     }
