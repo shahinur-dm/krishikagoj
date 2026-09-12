@@ -4590,6 +4590,14 @@ section[class*='home-layout-'] .img-zoom-hover img {
   border-bottom: 1px solid #e5e7eb;
 }
 
+.entry-content figcaption:empty,
+.entry-content figure figcaption:empty {
+  display: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 .entry-content figure {
   margin: 16px auto;
   max-width: 100%;
