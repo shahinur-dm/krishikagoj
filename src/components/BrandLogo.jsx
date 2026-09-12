@@ -2,7 +2,7 @@ import { useContext } from 'react'
 import { Link } from 'react-router-dom'
 import { SiteDataContext } from '../context/SiteDataContext'
 
-export const LOGO_SRC = '/logo.png'
+export const LOGO_SRC = '/api/media/6a95d28efda80a9b9410c7c7'
 
 export function LogoMark({ className = 'logo-img', alt = 'কৃষিকাগজ', src }) {
   return (

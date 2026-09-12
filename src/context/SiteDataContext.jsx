@@ -3,53 +3,30 @@ import { api, mapArticle } from '../api/client'
 
 const SiteDataContext = createContext(null)
 export { SiteDataContext }
-const CACHE_KEY = 'kk_home_cache_v42'
-
-function clearHomeCache() {
+function clearAllLegacyHomeCaches() {
+  if (typeof window === 'undefined') return
   try {
-    localStorage.removeItem(CACHE_KEY)
-  } catch {
-    /* ignore */
-  }
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i)
+      if (k && (k.startsWith('kk_home_cache') || k.startsWith('kk_cache_'))) {
+        localStorage.removeItem(k)
+      }
+    }
+  } catch {}
   try {
-    sessionStorage.removeItem(CACHE_KEY)
-  } catch {
-    /* ignore */
-  }
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const k = sessionStorage.key(i)
+      if (k && (k.startsWith('kk_home_cache') || k.startsWith('kk_cache_'))) {
+        sessionStorage.removeItem(k)
+      }
+    }
+  } catch {}
 }
 
 let siteRefreshFn = null
 
 export function refreshSiteData() {
   return siteRefreshFn ? siteRefreshFn() : Promise.resolve()
-}
-const FRESH_MS = 120_000
-const STALE_MS = 30 * 60_000
-
-function readCache() {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    if (!parsed?.at || !parsed?.data) return null
-    const age = Date.now() - parsed.at
-    if (age > STALE_MS) return null
-    return { data: parsed.data, fresh: age <= FRESH_MS }
-  } catch {
-    return null
-  }
-}
-
-function writeCache(data) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data }))
-  } catch {
-    try {
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data }))
-    } catch {
-      /* ignore */
-    }
-  }
 }
 
 function mapSlot(a) {
@@ -134,25 +111,24 @@ if (typeof window !== 'undefined' && typeof window.BroadcastChannel === 'functio
 }
 
 export function SiteDataProvider({ children }) {
-  const cached = typeof window !== 'undefined' ? readCache() : null
-  const [data, setData] = useState(() => (cached ? normalize(cached.data) : null))
-  const [loading, setLoading] = useState(!cached)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [subs, setSubs] = useState([])
 
   useEffect(() => {
     let alive = true
     let lastFetchTime = 0
+    clearAllLegacyHomeCaches()
 
     async function loadHome(forceBust = false) {
       const now = Date.now()
-      if (!forceBust && now - lastFetchTime < 4000) return
+      if (!forceBust && now - lastFetchTime < 3000) return
       lastFetchTime = now
       try {
-        if (!cached && !data) setLoading(true)
+        if (!data) setLoading(true)
         const home = await api.getHome({ bust: Date.now() })
         if (!alive) return
-        writeCache(home)
         setData(normalize(home))
         setError('')
 
@@ -165,7 +141,7 @@ export function SiteDataProvider({ children }) {
           desc.setAttribute('content', seo.metaDescription)
         }
       } catch (err) {
-        if (alive && !cached && !data) setError(err.message)
+        if (alive && !data) setError(err.message)
       } finally {
         if (alive) setLoading(false)
       }
@@ -186,7 +162,7 @@ export function SiteDataProvider({ children }) {
 
     // 2. Global refresh function (for Admin and manual triggers)
     siteRefreshFn = async () => {
-      clearHomeCache()
+      clearAllLegacyHomeCaches()
       await loadHome(true)
       await loadSubs()
       try {
@@ -210,7 +186,7 @@ export function SiteDataProvider({ children }) {
 
     // 4. Storage event fallback for cross-tab sync
     function handleStorageEvent(e) {
-      if (e.key === 'kk_last_sync_trigger' || e.key === CACHE_KEY) {
+      if (e.key === 'kk_last_sync_trigger') {
         loadHome(true)
       }
     }

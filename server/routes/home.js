@@ -250,12 +250,6 @@ router.get('/', async (req, res) => {
       return res.json(cached)
     }
 
-    try {
-      await ensureDemoAds()
-    } catch (err) {
-      console.warn('ensureDemoAds failed:', err.message)
-    }
-
     const [
       categories,
       articles,
@@ -524,11 +518,8 @@ router.get('/', async (req, res) => {
     }
 
     if (!bust) cacheSet(CACHE_KEY, payload, CACHE_TTL)
-    res.set(
-      'Cache-Control',
-      bust ? 'private, no-store' : 'public, max-age=10, s-maxage=30, stale-while-revalidate=60',
-    )
-    res.set('X-Cache', bust ? 'BYPASS' : 'MISS')
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    res.set('X-Cache', bust ? 'BYPASS' : (cached ? 'HIT' : 'MISS'))
     res.json(payload)
   } catch (err) {
     res.status(500).json({ message: err.message })
