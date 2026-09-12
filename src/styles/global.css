@@ -4568,7 +4568,9 @@ section[class*='home-layout-'] .img-zoom-hover img {
   margin: 0 auto;
 }
 
-.news-image-caption {
+.news-image-caption,
+.entry-content figcaption,
+.entry-content figure figcaption {
   font-size: 14px;
   line-height: 1.6;
   color: #4b5563;
@@ -4579,6 +4581,23 @@ section[class*='home-layout-'] .img-zoom-hover img {
   text-align: left;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  white-space: normal;
+  word-break: normal;
+}
+
+.entry-content figure {
+  margin: 16px auto;
+  max-width: 100%;
+  display: block;
+}
+
+.entry-content figure img {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 0 auto;
 }
 
 .post-subtitle {

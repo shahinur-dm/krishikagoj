@@ -98,6 +98,7 @@ export default function AddPostCkeditor({ value, onChange }) {
     open: false,
     initialUrl: '',
     initialAlt: '',
+    initialCaption: '',
     isEdit: false,
   })
 
@@ -116,7 +117,7 @@ export default function AddPostCkeditor({ value, onChange }) {
     const editor = instanceRef.current
     if (!editor) return
 
-    let targetImg = imgEl
+    let targetEl = imgEl
     const sel = editor.getSelection()
     if (sel) {
       try {
@@ -124,18 +125,51 @@ export default function AddPostCkeditor({ value, onChange }) {
       } catch {
         activeBookmarksRef.current = null
       }
-      if (!targetImg) {
+      if (!targetEl) {
         const selEl = sel.getSelectedElement()
-        if (selEl && selEl.is('img')) targetImg = selEl
+        if (selEl) {
+          if (selEl.is('img') || selEl.is('figure')) targetEl = selEl
+        }
+      }
+      if (!targetEl) {
+        const startEl = sel.getStartElement()
+        if (startEl) {
+          if (startEl.is('img')) targetEl = startEl
+          else if (startEl.is('figcaption') || startEl.is('figure') || startEl.getAscendant('figure')) {
+            targetEl = startEl.is('figure') ? startEl : startEl.getAscendant('figure')
+          } else {
+            const imgAsc = startEl.getAscendant('img')
+            if (imgAsc) targetEl = imgAsc
+          }
+        }
       }
     }
-    activeElementRef.current = targetImg
+    activeElementRef.current = targetEl
+
+    let initialUrl = ''
+    let initialAlt = ''
+    let initialCaption = ''
+
+    if (targetEl) {
+      const imgNode = targetEl.is('img') ? targetEl : targetEl.findOne?.('img')
+      const figNode = targetEl.is('figure') ? targetEl : targetEl.getAscendant?.('figure')
+
+      if (imgNode) {
+        initialUrl = imgNode.getAttribute('src') || ''
+        initialAlt = imgNode.getAttribute('alt') || ''
+      }
+      if (figNode) {
+        const figcap = figNode.findOne?.('figcaption')
+        if (figcap) initialCaption = figcap.getText() || ''
+      }
+    }
 
     setImageDialog({
       open: true,
-      initialUrl: targetImg ? targetImg.getAttribute('src') || '' : '',
-      initialAlt: targetImg ? targetImg.getAttribute('alt') || '' : '',
-      isEdit: Boolean(targetImg),
+      initialUrl,
+      initialAlt,
+      initialCaption,
+      isEdit: Boolean(targetEl),
     })
   }
 
@@ -176,30 +210,76 @@ export default function AddPostCkeditor({ value, onChange }) {
     })
   }
 
-  function handleInsertImage({ url, alt }) {
+  function handleInsertImage({ url, alt, caption }) {
     const editor = instanceRef.current
     if (!editor) return
     editor.focus()
 
-    const targetImg = activeElementRef.current
-    if (targetImg && typeof targetImg.setAttribute === 'function') {
-      targetImg.setAttribute('src', url)
-      if (alt) targetImg.setAttribute('alt', alt)
-      else targetImg.removeAttribute('alt')
-      targetImg.addClass('img-fluid')
-      targetImg.setStyle('max-width', '100%')
-      targetImg.setStyle('height', 'auto')
-      targetImg.setStyle('display', 'block')
-      targetImg.setStyle('margin', '12px auto')
+    const targetEl = activeElementRef.current
+    const altAttr = alt ? ` alt="${alt.replace(/"/g, '&quot;')}"` : ''
+    const cleanCaption = (caption || '').trim()
+    const escapedCap = cleanCaption.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+    if (targetEl) {
+      const imgNode = targetEl.is('img') ? targetEl : targetEl.findOne?.('img')
+      const figNode = targetEl.is('figure') ? targetEl : targetEl.getAscendant?.('figure')
+
+      if (figNode && imgNode) {
+        // Updating existing figure
+        imgNode.setAttribute('src', url)
+        if (alt) imgNode.setAttribute('alt', alt)
+        else imgNode.removeAttribute('alt')
+
+        const figcap = figNode.findOne?.('figcaption')
+        if (cleanCaption) {
+          if (figcap) {
+            figcap.setText(cleanCaption)
+          } else if (window.CKEDITOR) {
+            const capEl = new window.CKEDITOR.dom.element('figcaption')
+            capEl.setText(cleanCaption)
+            figNode.append(capEl)
+          }
+        } else if (figcap) {
+          figcap.remove()
+        }
+      } else if (imgNode) {
+        // Updating existing standalone image
+        if (cleanCaption && window.CKEDITOR) {
+          const figHtml = `<figure class="news-inline-image"><img src="${url}"${altAttr} class="img-fluid" style="max-width:100%;height:auto;border-radius:6px;display:block;margin:0 auto;" /><figcaption>${escapedCap}</figcaption></figure>`
+          const newEl = window.CKEDITOR.dom.element.createFromHtml(figHtml, editor.document)
+          const parent = imgNode.getParent()
+          if (parent && parent.is('p') && parent.getChildren().count() === 1) {
+            newEl.insertBefore(parent)
+            parent.remove()
+          } else {
+            newEl.insertBefore(imgNode)
+            imgNode.remove()
+          }
+        } else {
+          imgNode.setAttribute('src', url)
+          if (alt) imgNode.setAttribute('alt', alt)
+          else imgNode.removeAttribute('alt')
+          imgNode.addClass('img-fluid')
+          imgNode.setStyle('max-width', '100%')
+          imgNode.setStyle('height', 'auto')
+          imgNode.setStyle('display', 'block')
+          imgNode.setStyle('margin', '12px auto')
+        }
+      }
     } else {
+      // Inserting new image
       if (activeBookmarksRef.current && editor.getSelection()) {
         try {
           editor.getSelection().selectBookmarks(activeBookmarksRef.current)
         } catch {}
       }
-      const altAttr = alt ? ` alt="${alt.replace(/"/g, '&quot;')}"` : ''
-      const html = `<p><img src="${url}"${altAttr} class="img-fluid" style="max-width:100%;height:auto;border-radius:6px;display:block;margin:12px auto;" /></p>`
-      editor.insertHtml(html)
+      if (cleanCaption) {
+        const html = `<figure class="news-inline-image"><img src="${url}"${altAttr} class="img-fluid" style="max-width:100%;height:auto;border-radius:6px;display:block;margin:0 auto;" /><figcaption>${escapedCap}</figcaption></figure><p></p>`
+        editor.insertHtml(html)
+      } else {
+        const html = `<p><img src="${url}"${altAttr} class="img-fluid" style="max-width:100%;height:auto;border-radius:6px;display:block;margin:12px auto;" /></p>`
+        editor.insertHtml(html)
+      }
     }
     skipRef.current = true
     onChangeRef.current(editor.getData())
@@ -207,10 +287,19 @@ export default function AddPostCkeditor({ value, onChange }) {
 
   function handleRemoveImage() {
     const editor = instanceRef.current
-    const targetImg = activeElementRef.current
-    if (editor && targetImg && typeof targetImg.remove === 'function') {
+    const targetEl = activeElementRef.current
+    if (editor && targetEl) {
       editor.focus()
-      targetImg.remove()
+      const figNode = targetEl.is('figure') ? targetEl : targetEl.getAscendant?.('figure')
+      if (figNode && typeof figNode.remove === 'function') {
+        figNode.remove()
+      } else if (typeof targetEl.remove === 'function') {
+        const parent = targetEl.getParent?.()
+        targetEl.remove()
+        if (parent && parent.is('p') && parent.getChildren().count() === 0) {
+          parent.remove()
+        }
+      }
       skipRef.current = true
       onChangeRef.current(editor.getData())
     }
@@ -319,15 +408,16 @@ export default function AddPostCkeditor({ value, onChange }) {
             }
           }
 
-          // Intercept double-click on images and links
+          // Intercept double-click on images, figures, and links
           editor.on(
             'doubleclick',
             (evt) => {
               const el = evt.data?.element
               if (!el) return
-              if (el.is('img')) {
+              if (el.is('img') || el.is('figure') || el.is('figcaption') || el.getAscendant('figure')) {
                 evt.data.dialog = ''
-                openImageDialog(el)
+                const target = el.is('img') ? el : (el.findOne?.('img') || el.getAscendant?.('figure') || el)
+                openImageDialog(target)
                 return false
               }
               if (el.is('a') || el.hasAscendant('a')) {
@@ -383,6 +473,7 @@ export default function AddPostCkeditor({ value, onChange }) {
         open={imageDialog.open}
         initialUrl={imageDialog.initialUrl}
         initialAlt={imageDialog.initialAlt}
+        initialCaption={imageDialog.initialCaption}
         isEdit={imageDialog.isEdit}
         onClose={() => setImageDialog((prev) => ({ ...prev, open: false }))}
         onInsert={handleInsertImage}

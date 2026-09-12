@@ -8,6 +8,7 @@ export default function EditorImageDialog({
   open,
   initialUrl = '',
   initialAlt = '',
+  initialCaption = '',
   isEdit = false,
   onClose,
   onInsert,
@@ -24,6 +25,7 @@ export default function EditorImageDialog({
   const [error, setError] = useState('')
   const [selectedUrl, setSelectedUrl] = useState('')
   const [altText, setAltText] = useState('')
+  const [caption, setCaption] = useState('')
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef(null)
@@ -32,6 +34,7 @@ export default function EditorImageDialog({
     if (!open) return undefined
     setSelectedUrl(initialUrl || '')
     setAltText(initialAlt || '')
+    setCaption(initialCaption || '')
     setTab(initialUrl ? 'library' : 'library')
     setPage(1)
     setSearch('')
@@ -112,6 +115,7 @@ export default function EditorImageDialog({
     onInsert({
       url: selectedUrl,
       alt: altText.trim(),
+      caption: caption.trim(),
     })
     onClose()
   }
@@ -310,21 +314,35 @@ export default function EditorImageDialog({
 
         {/* Selected Image Preview & Alt / Caption Details */}
         {selectedUrl ? (
-          <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#f8fafc', display: 'flex', gap: '14px', alignItems: 'center' }}>
-            <div style={{ width: '70px', height: '70px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1', flexShrink: 0, background: '#fff' }}>
+          <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#f8fafc', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+            <div style={{ width: '74px', height: '74px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1', flexShrink: 0, background: '#fff', marginTop: '2px' }}>
               <SafeImage src={selectedUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '4px' }}>
-                Image Caption / Alt Text (ঐচ্ছিক)
-              </label>
-              <input
-                type="text"
-                value={altText}
-                onChange={(e) => setAltText(e.target.value)}
-                placeholder="ছবির বিবরণ বা ক্যাপশন লিখুন..."
-                style={{ width: '100%', padding: '6px 10px', fontSize: '13px' }}
-              />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', display: 'block', marginBottom: '3px' }}>
+                  Image Caption (ছবির ক্যাপশন — ছবির নিচে প্রদর্শিত হবে)
+                </label>
+                <input
+                  type="text"
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="ছবির নিচে প্রদর্শনের জন্য ক্যাপশন লিখুন (ঐচ্ছিক)..."
+                  style={{ width: '100%', padding: '6px 10px', fontSize: '13px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 500, color: '#64748b', display: 'block', marginBottom: '2px' }}>
+                  Alt Text (ছবির বিবরণ / বিকল্প টেক্সট — ঐচ্ছিক)
+                </label>
+                <input
+                  type="text"
+                  value={altText}
+                  onChange={(e) => setAltText(e.target.value)}
+                  placeholder="Alt text (ঐচ্ছিক)..."
+                  style={{ width: '100%', padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
             </div>
           </div>
         ) : null}
