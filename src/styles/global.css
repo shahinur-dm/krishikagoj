@@ -4585,6 +4585,11 @@ section[class*='home-layout-'] .img-zoom-hover img {
   word-break: normal;
 }
 
+.entry-content figcaption,
+.entry-content figure figcaption {
+  border-bottom: 1px solid #e5e7eb;
+}
+
 .entry-content figure {
   margin: 16px auto;
   max-width: 100%;

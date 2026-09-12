@@ -574,7 +574,7 @@ function CategorySpotlight({
   sideCategory = null,
 }) {
   const { text } = useLang()
-  const { ads, opinions = [] } = useSiteData()
+  const { ads } = useSiteData()
   const featured = articles[0]
   const thumbList = articles.slice(1, 4)
   const arrowList = articles.slice(4, 7)
@@ -582,7 +582,7 @@ function CategorySpotlight({
   const featuredTitle = text(featured.title, featured.titleEn)
   const featuredExcerpt = text(featured.excerpt, featured.excerptEn)
   const companionAside =
-    companion || opinions.length ? (
+    companion ? (
       <CategoryMotamot
         title={companion?.title || 'মতামত'}
         slug={companion?.slug || 'motamot'}
@@ -592,7 +592,7 @@ function CategorySpotlight({
     ) : null
 
   return (
-    <section className={`mt-3 cat-section-with-ad home-layout-spotlight${slug === 'motamot' ? ' home-layout-motamot' : ''}${companionAside ? ' home-gobeshona-motamot' : ''}`}>
+    <section className={`mt-3 cat-section-with-ad home-layout-spotlight${slug === 'motamot' ? ' home-layout-motamot' : ''}${companionAside && !sideCategory?.articles?.length ? ' home-gobeshona-motamot' : ''}`}>
       <div className="container">
         <div className="row align-items-start">
           <div className="col-lg-9">
@@ -655,21 +655,22 @@ function CategorySpotlight({
             </div>
           </div>
           <div className="col-lg-3">
-            {companionAside ||
-              (sideCategory?.articles?.length ? (
-                <>
-                  <div className="cat-side-ad mb-3">
-                    <AdSlider ads={ads} position="sidebar" variant="side" startOffset={adOffset} />
-                  </div>
-                  <CollegeCategoryStack
-                    title={sideCategory.title}
-                    slug={sideCategory.slug}
-                    articles={sideCategory.articles}
-                  />
-                </>
-              ) : (
-                <CategorySideColumn latest={latest} popular={popular} adOffset={adOffset} />
-              ))}
+            {sideCategory?.articles?.length ? (
+              <>
+                <div className="cat-side-ad mb-3">
+                  <AdSlider ads={ads} position="sidebar" variant="side" startOffset={adOffset} />
+                </div>
+                <CollegeCategoryStack
+                  title={sideCategory.title}
+                  slug={sideCategory.slug}
+                  articles={sideCategory.articles}
+                />
+              </>
+            ) : companionAside ? (
+              companionAside
+            ) : (
+              <CategorySideColumn latest={latest} popular={popular} adOffset={adOffset} />
+            )}
           </div>
         </div>
       </div>

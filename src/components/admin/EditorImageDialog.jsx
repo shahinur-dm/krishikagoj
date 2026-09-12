@@ -51,7 +51,7 @@ export default function EditorImageDialog({
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [open, initialUrl, initialAlt, onClose])
+  }, [open, initialUrl, initialAlt, initialCaption, onClose])
 
   useEffect(() => {
     if (!open || tab !== 'library') return undefined
@@ -130,7 +130,7 @@ export default function EditorImageDialog({
         aria-labelledby="editor-image-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="media-picker-head">
+        <div className="media-picker-head" style={{ flexShrink: 0 }}>
           <h3 id="editor-image-title">
             <i className="fa-solid fa-image" style={{ marginRight: '8px', color: '#0284c7' }} />
             {isEdit ? 'ছবি পরিবর্তন / সম্পাদনা' : 'আর্টিকেলে ছবি যোগ করুন (Insert Image)'}
@@ -141,7 +141,7 @@ export default function EditorImageDialog({
         </div>
 
         {/* Option Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', background: '#f8fafc', padding: '0 16px' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', background: '#f8fafc', padding: '0 16px', flexShrink: 0 }}>
           <button
             type="button"
             style={{
@@ -192,7 +192,7 @@ export default function EditorImageDialog({
         </div>
 
         {error ? (
-          <div style={{ margin: '10px 16px 0' }} className="admin-alert admin-alert-error">
+          <div style={{ margin: '10px 16px 0', flexShrink: 0 }} className="admin-alert admin-alert-error">
             {error}
           </div>
         ) : null}
@@ -202,6 +202,7 @@ export default function EditorImageDialog({
           <>
             <form
               className="media-picker-search"
+              style={{ flexShrink: 0 }}
               onSubmit={(e) => {
                 e.preventDefault()
                 setPage(1)
@@ -219,7 +220,7 @@ export default function EditorImageDialog({
               </button>
             </form>
 
-            <div className="media-picker-grid-wrap" style={{ minHeight: '260px', maxHeight: '340px' }}>
+            <div className="media-picker-grid-wrap" style={{ minHeight: 0, maxHeight: '340px' }}>
               {loading ? <p className="media-picker-status">ছবি লোড হচ্ছে...</p> : null}
               {!loading && !items.length ? (
                 <div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b' }}>
@@ -246,7 +247,7 @@ export default function EditorImageDialog({
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', background: '#fafafa', borderTop: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', background: '#fafafa', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
               <span className="media-picker-meta" style={{ margin: 0 }}>
                 {total ? `মোট ${total}টি ছবি` : ''}
                 {pages > 1 ? ` · পৃষ্ঠা ${page}/${pages}` : ''}
@@ -275,7 +276,7 @@ export default function EditorImageDialog({
 
         {/* Tab 2: Upload from Device */}
         {tab === 'upload' ? (
-          <div style={{ padding: '20px 16px' }}>
+          <div style={{ padding: '20px 16px', overflowY: 'auto', flex: '1 1 auto', minHeight: 0 }}>
             <div
               onDragOver={(e) => {
                 e.preventDefault()
@@ -314,7 +315,7 @@ export default function EditorImageDialog({
 
         {/* Selected Image Preview & Alt / Caption Details */}
         {selectedUrl ? (
-          <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#f8fafc', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+          <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#f8fafc', display: 'flex', gap: '14px', alignItems: 'flex-start', flexShrink: 0 }}>
             <div style={{ width: '74px', height: '74px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1', flexShrink: 0, background: '#fff', marginTop: '2px' }}>
               <SafeImage src={selectedUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
@@ -348,7 +349,7 @@ export default function EditorImageDialog({
         ) : null}
 
         {/* Footer Actions */}
-        <div className="media-picker-foot" style={{ marginTop: 0 }}>
+        <div className="media-picker-foot" style={{ marginTop: 0, flexShrink: 0 }}>
           <div>
             {isEdit && onRemove ? (
               <button

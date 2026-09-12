@@ -45,15 +45,6 @@ export default function AddNewPostForm({
     }))
   }
 
-  function setCategoryPosition(value) {
-    setForm((f) => ({
-      ...f,
-      categoryPosition: value,
-      firstSection: value === 'firstSection' ? true : f.firstSection,
-      firstSectionThumbnail: value === 'firstSectionThumbnail' ? true : f.firstSectionThumbnail,
-      categoryHomepage: value === 'categoryHomepage' ? true : f.categoryHomepage,
-    }))
-  }
 
   function resetForm() {
     if (isEdit && originalData) {
@@ -152,7 +143,7 @@ export default function AddNewPostForm({
           </div>
           <div className="admin-card-body">
             <form onSubmit={onSubmit}>
-              <div className="anp-row anp-row-4">
+              <div className="anp-row anp-row-2">
                 <div className="admin-form-group">
                   <label>
                     Language <span className="anp-req">*</span>
@@ -169,9 +160,7 @@ export default function AddNewPostForm({
                   </label>
                   <select
                     value={form.category}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, category: e.target.value, subcategory: '' }))
-                    }
+                    onChange={(e) => update('category', e.target.value)}
                     required
                   >
                     <option value="">Select Category</option>
@@ -182,29 +171,6 @@ export default function AddNewPostForm({
                           {c.name}
                         </option>
                       ))}
-                  </select>
-                </div>
-                <div className="admin-form-group">
-                  <label>Sub Category</label>
-                  <select value={form.subcategory} onChange={(e) => update('subcategory', e.target.value)}>
-                    <option value="">Select Sub Category</option>
-                    {subcategories.map((s) => (
-                      <option key={s._id} value={s._id}>
-                        {s.nameBn}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="admin-form-group">
-                  <label>Category Position</label>
-                  <select
-                    value={form.categoryPosition || ''}
-                    onChange={(e) => setCategoryPosition(e.target.value)}
-                  >
-                    <option value="">Select Other Position</option>
-                    <option value="firstSection">First Section</option>
-                    <option value="firstSectionThumbnail">First Section Thumbnail</option>
-                    <option value="categoryHomepage">Category Homepage</option>
                   </select>
                 </div>
               </div>

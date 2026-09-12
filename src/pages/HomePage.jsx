@@ -25,16 +25,66 @@ function isBodoliCategory(cat) {
   return cat?.slug === 'bodoli' || String(cat?.name || '').includes('বদলি')
 }
 
+function findConfigForCat(cat, sectionSidebars) {
+  if (!cat || !sectionSidebars) return null
+  const slug = cat.slug
+  const name = cat.name
+  const id = String(cat._id || '')
+
+  if (slug && sectionSidebars[slug] !== undefined) return sectionSidebars[slug]
+  if (id && sectionSidebars[id] !== undefined) return sectionSidebars[id]
+  if (name && sectionSidebars[name] !== undefined) return sectionSidebars[name]
+
+  for (const [key, conf] of Object.entries(sectionSidebars)) {
+    if (!conf) continue
+    if (key === 'bodoli' && isBodoliCategory(cat)) return conf
+    if (key === 'krishoker-kotha' && usesKrishokerKothaLayout(cat)) return conf
+    if (key === 'shikkha' && usesShikkhaLayout(cat)) return conf
+    if (key === 'gobeshona' && usesGobeshonaLayout(cat)) return conf
+    if (key === 'proshason' && usesProshasonLayout(cat)) return conf
+    if (key === 'projukti' && usesProjuktiLayout(cat)) return conf
+    if (key === 'uddokta' && usesUddoktaHeroLayout(cat)) return conf
+    if (key === 'motamot' && usesMotamotLayout(cat)) return conf
+    if (key === 'safollo' && usesSafolloLayout(cat)) return conf
+    if (key === 'binodon' && usesBinodonLayout(cat)) return conf
+    if (key === 'bishesh' && (slug === 'bishesh' || String(name || '').includes('বিশেষ'))) return conf
+    if (key === 'foshol' && (slug === 'foshol' || String(name || '').includes('ফসল'))) return conf
+    if (key === 'prani' && (slug === 'prani' || String(name || '').includes('প্রাণি'))) return conf
+  }
+  return null
+}
+
+function findTargetBlock(targetSlug, categoryBlocks) {
+  if (!targetSlug || !categoryBlocks?.length) return null
+  return categoryBlocks.find((b) => {
+    if (!b?.cat) return false
+    if (b.cat.slug === targetSlug) return true
+    if (b.cat.name === targetSlug) return true
+    if (String(b.cat._id) === targetSlug) return true
+    if (targetSlug === 'projukti' && usesProjuktiLayout(b.cat)) return true
+    if (targetSlug === 'motamot' && usesMotamotLayout(b.cat)) return true
+    if (targetSlug === 'gobeshona' && usesGobeshonaLayout(b.cat)) return true
+    if (targetSlug === 'shikkha' && usesShikkhaLayout(b.cat)) return true
+    if (targetSlug === 'proshason' && usesProshasonLayout(b.cat)) return true
+    if (targetSlug === 'uddokta' && usesUddoktaHeroLayout(b.cat)) return true
+    if (targetSlug === 'krishoker-kotha' && usesKrishokerKothaLayout(b.cat)) return true
+    if (targetSlug === 'safollo' && usesSafolloLayout(b.cat)) return true
+    if (targetSlug === 'bishesh' && (b.cat.slug === 'bishesh' || String(b.cat.name || '').includes('বিশেষ'))) return true
+    if (targetSlug === 'foshol' && (b.cat.slug === 'foshol' || String(b.cat.name || '').includes('ফসল'))) return true
+    if (targetSlug === 'prani' && (b.cat.slug === 'prani' || String(b.cat.name || '').includes('প্রাণি'))) return true
+    return false
+  })
+}
+
 function getSidebarForSection(cat, categoryBlocks, sectionSidebars) {
   if (!cat) return null
-  const slug = cat.slug
-  const config = sectionSidebars?.[slug]
+  const config = findConfigForCat(cat, sectionSidebars)
 
   // If explicitly disabled in admin
   if (config && config.enabled === false) return null
 
   let targetSlug = config?.categorySlug
-  if (targetSlug === undefined || targetSlug === null) {
+  if (targetSlug === undefined || targetSlug === null || targetSlug === '') {
     // Default fallback for sections that traditionally display the projukti sidebar
     if (isBodoliCategory(cat) || usesKrishokerKothaLayout(cat) || usesShikkhaLayout(cat)) {
       targetSlug = 'projukti'
@@ -43,13 +93,7 @@ function getSidebarForSection(cat, categoryBlocks, sectionSidebars) {
 
   if (!targetSlug) return null
 
-  const targetBlock = categoryBlocks.find(
-    (b) =>
-      b.cat.slug === targetSlug ||
-      b.cat.name === targetSlug ||
-      String(b.cat._id) === targetSlug ||
-      (targetSlug === 'projukti' && usesProjuktiLayout(b.cat)),
-  )
+  const targetBlock = findTargetBlock(targetSlug, categoryBlocks)
   if (!targetBlock || !targetBlock.articles?.length) return null
 
   const limit = Math.max(2, Math.min(10, Number(config?.limit) || 5))
@@ -220,7 +264,7 @@ export default function HomePage() {
                 ? 'proshason'
                 : usesProjuktiLayout(cat)
                 ? 'projukti'
-                : usesUddoktaHeroLayout(cat) || usesKrishokerKothaLayout(cat)
+                : usesUddoktaHeroLayout(cat) || usesKrishokerKothaLayout(cat) || usesShikkhaLayout(cat)
                 ? 'heroGridSidebar'
                 : usesSafolloLayout(cat)
                 ? 'heroGrid'
