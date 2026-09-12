@@ -53,6 +53,16 @@ function PostMeta({ article, authorName }) {
 function ShareRow({ url, title, onFontChange }) {
   const { t } = useLang()
   const [copied, setCopied] = useState(false)
+  const [isShareOpen, setShareOpen] = useState(false)
+
+  useEffect(() => {
+    if (!isShareOpen) return
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setShareOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isShareOpen])
 
   async function copyLink() {
     try {
@@ -130,6 +140,15 @@ function ShareRow({ url, title, onFontChange }) {
         >
           <i className="fa-solid fa-print" />
         </button>
+        <button
+          type="button"
+          className="kk-share-btn kk-share-main"
+          aria-label={t.share}
+          title={t.share}
+          onClick={() => setShareOpen(true)}
+        >
+          <i className="fa-solid fa-share" />
+        </button>
         {copied && <span className="kk-copied">{t.copied}</span>}
       </div>
       <div className="kk-font-btns">
@@ -140,6 +159,123 @@ function ShareRow({ url, title, onFontChange }) {
           A-
         </button>
       </div>
+
+      {isShareOpen && (
+        <div className="kk-share-modal-backdrop" onClick={() => setShareOpen(false)}>
+          <div
+            className="kk-share-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t.share}
+          >
+            <div className="kk-share-modal-header">
+              <h4 className="kk-share-modal-title">{t.share}</h4>
+              <button
+                type="button"
+                className="kk-share-modal-close"
+                onClick={() => setShareOpen(false)}
+                aria-label="Close"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <div className="kk-share-modal-grid">
+              {/* Facebook */}
+              <button
+                type="button"
+                className="kk-share-option"
+                onClick={() => {
+                  popup(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`)
+                  setShareOpen(false)
+                }}
+              >
+                <span className="kk-share-opt-icon kk-share-opt-fb">
+                  <i className="fa-brands fa-facebook-f" />
+                </span>
+                <span className="kk-share-opt-label">{t.shareFacebook}</span>
+              </button>
+
+              {/* LinkedIn */}
+              <button
+                type="button"
+                className="kk-share-option"
+                onClick={() => {
+                  popup(
+                    `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`,
+                  )
+                  setShareOpen(false)
+                }}
+              >
+                <span className="kk-share-opt-icon kk-share-opt-li">
+                  <i className="fa-brands fa-linkedin-in" />
+                </span>
+                <span className="kk-share-opt-label">{t.shareLinkedin}</span>
+              </button>
+
+              {/* Email */}
+              <a
+                className="kk-share-option"
+                href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`${title}\n\n${url}`)}`}
+                onClick={() => setShareOpen(false)}
+              >
+                <span className="kk-share-opt-icon kk-share-opt-email">
+                  <i className="fa-solid fa-envelope" />
+                </span>
+                <span className="kk-share-opt-label">{t.shareEmail}</span>
+              </a>
+
+              {/* Twitter / X */}
+              <button
+                type="button"
+                className="kk-share-option"
+                onClick={() => {
+                  popup(
+                    `https://twitter.com/share?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`,
+                  )
+                  setShareOpen(false)
+                }}
+              >
+                <span className="kk-share-opt-icon kk-share-opt-x">
+                  <i className="fa-brands fa-x-twitter" />
+                </span>
+                <span className="kk-share-opt-label">{t.shareTwitter}</span>
+              </button>
+
+              {/* Copy Link */}
+              <button
+                type="button"
+                className="kk-share-option"
+                onClick={() => {
+                  copyLink()
+                }}
+              >
+                <span className="kk-share-opt-icon kk-share-opt-copy">
+                  <i className={copied ? 'fa-solid fa-check' : 'fa-solid fa-link'} />
+                </span>
+                <span className="kk-share-opt-label">
+                  {copied ? t.linkCopied : t.copyNewsLink}
+                </span>
+              </button>
+
+              {/* WhatsApp */}
+              <a
+                className="kk-share-option"
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${title} ${url}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setShareOpen(false)}
+              >
+                <span className="kk-share-opt-icon kk-share-opt-wa">
+                  <i className="fa-brands fa-whatsapp" />
+                </span>
+                <span className="kk-share-opt-label">{t.shareWhatsapp}</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

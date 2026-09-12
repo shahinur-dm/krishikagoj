@@ -43,8 +43,7 @@ function absoluteUrl(pathOrUrl, origin = window.location.origin) {
 }
 
 /**
- * Page title/description/JSON-LD only. Open Graph and Twitter tags live in
- * index.html so crawlers can read them without JavaScript.
+ * Dynamic SEO, Open Graph, and Twitter metadata management for client-side navigation.
  */
 export default function SeoHead({
   title,
@@ -60,14 +59,34 @@ export default function SeoHead({
 }) {
   useEffect(() => {
     const fullTitle = title || siteName
-    const desc = (description || '').replace(/\s+/g, ' ').trim().slice(0, 160)
-    const url = canonical || window.location.href.split('?')[0]
+    const desc = (description || '').replace(/\s+/g, ' ').trim().slice(0, 200)
+    const url = canonical || (typeof window !== 'undefined' ? window.location.href.split('?')[0] : '')
+    const absImage = image ? absoluteUrl(image) : ''
 
     document.title = fullTitle
     upsertMeta('name', 'description', desc)
     if (keywords) upsertMeta('name', 'keywords', keywords)
     if (author) upsertMeta('name', 'author', author)
     upsertMeta('name', 'robots', noIndex ? 'noindex,nofollow' : 'index,follow')
+
+    // Open Graph
+    upsertMeta('property', 'og:site_name', siteName)
+    upsertMeta('property', 'og:title', title || siteName)
+    upsertMeta('property', 'og:description', desc)
+    upsertMeta('property', 'og:url', url)
+    upsertMeta('property', 'og:type', type)
+    if (absImage) {
+      upsertMeta('property', 'og:image', absImage)
+      upsertMeta('property', 'og:image:secure_url', absImage)
+    }
+
+    // Twitter / X
+    upsertMeta('name', 'twitter:card', 'summary_large_image')
+    upsertMeta('name', 'twitter:title', title || siteName)
+    upsertMeta('name', 'twitter:description', desc)
+    if (absImage) {
+      upsertMeta('name', 'twitter:image', absImage)
+    }
 
     upsertLink('canonical', url)
     upsertJsonLd('kk-jsonld', jsonLd || null)

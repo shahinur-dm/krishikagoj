@@ -24,13 +24,22 @@ import pagesRouter from './routes/pages.js'
 import aiSettingsRouter from './routes/aiSettings.js'
 import layoutTopicsRouter from './routes/layoutTopics.js'
 import translateRouter from './routes/translate.js'
+import { renderArticleOgHtml } from './utils/ssrOgMeta.js'
 
 const app = express()
 
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
+app.get(['/news/:idOrSlug', '/api/news/:idOrSlug'], async (req, res) => {
+  await connectDb()
+  return renderArticleOgHtml(req, res, req.params.idOrSlug)
+})
+
 app.use((req, _res, next) => {
+  if (req.url && (req.url.startsWith('/news') || req.url.startsWith('/api/news'))) {
+    return next()
+  }
   if (req.url && !req.url.startsWith('/api')) {
     req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`
   }
