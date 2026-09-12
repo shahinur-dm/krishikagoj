@@ -34,21 +34,40 @@ function escapeAttr(str) {
 
 export async function renderArticleOgHtml(req, res, idOrSlug) {
   try {
-    const isId = /^[0-9a-fA-F]{24}$/.test(idOrSlug)
+    const rawIdOrSlug = String(idOrSlug || '').trim()
+    let decoded = rawIdOrSlug
+    try {
+      decoded = decodeURIComponent(rawIdOrSlug)
+    } catch {}
+
+    const isId = /^[0-9a-fA-F]{24}$/.test(rawIdOrSlug) || /^[0-9a-fA-F]{24}$/.test(decoded)
+    const targetId = isId ? (rawIdOrSlug.length === 24 ? rawIdOrSlug : decoded) : null
+
     let article = await Article.findOne(
-      isId ? { _id: idOrSlug } : { slug: idOrSlug },
+      targetId
+        ? { _id: targetId }
+        : {
+            $or: [
+              { slug: rawIdOrSlug },
+              { slug: decoded },
+              { title: decoded },
+              { titleEn: decoded },
+            ],
+          },
     ).lean()
 
-    if (!article && isId) {
-      const op = await Opinion.findById(idOrSlug).lean()
+    if (!article && targetId) {
+      const op = await Opinion.findById(targetId).lean()
       if (op) {
         article = {
           _id: op._id,
           title: op.title,
+          titleEn: op.titleEn,
           excerpt: op.details ? op.details.slice(0, 160) : '',
           body: op.details || '',
           image: op.image || '',
           slug: String(op._id),
+          publishedAt: op.createdAt,
         }
       }
     }
@@ -62,18 +81,28 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
     const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')
     const siteUrl = `${proto}://${host}`
 
-    const siteName = 'কৃষিকাগজ'
-    const activeTitle = article.title || siteName
+    const isEn =
+      req.query.lang === 'en' ||
+      (req.headers.cookie && req.headers.cookie.includes('kk_lang=en'))
+
+    const siteName = isEn ? 'Krishi Kagoj' : 'কৃষিকাগজ'
+    const activeTitle = (isEn && article.titleEn ? article.titleEn : article.title) || siteName
     const pageTitle = `${activeTitle} | ${siteName}`
+
     const rawDesc =
+      (isEn && article.excerptEn ? article.excerptEn : '') ||
       article.metaDescription ||
       article.excerpt ||
       article.shortHeadline ||
-      stripHtml(article.body) ||
-      'কৃষিকাগজ — বাংলাদেশের কৃষি খবর, ফসল, প্রাণিসম্পদ, মৎস্য, প্রযুক্তি ও কৃষকের কথা।'
-    const desc = rawDesc.replace(/\s+/g, ' ').trim().slice(0, 200)
-    const canonicalUrl = `${siteUrl}/news/${encodeURIComponent(article.slug || article._id)}`
-    const rawImg = article.image || '/api/media/6a85e9c7821f3539c0aa9591'
+      stripHtml(isEn && article.bodyEn ? article.bodyEn : article.body) ||
+      (isEn
+        ? 'Krishi Kagoj — Agriculture news, crops, livestock, fisheries, technology and farmers stories.'
+        : 'কৃষিকাগজ — বাংলাদেশের কৃষি খবর, ফসল, প্রাণিসম্পদ, মৎস্য, প্রযুক্তি ও কৃষকের কথা।')
+
+    const desc = rawDesc.replace(/\s+/g, ' ').trim().slice(0, 220)
+    const cleanSlug = article.slug || String(article._id)
+    const canonicalUrl = `${siteUrl}/news/${encodeURIComponent(cleanSlug)}`
+    const rawImg = article.image || '/logo.png'
     const imgUrl = rawImg.startsWith('http')
       ? rawImg
       : `${siteUrl}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`
@@ -121,11 +150,14 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
       `<meta property="og:url" content="${escapeAttr(canonicalUrl)}" />`,
       `<meta property="og:image" content="${escapeAttr(imgUrl)}" />`,
       `<meta property="og:image:secure_url" content="${escapeAttr(imgUrl)}" />`,
+      `<meta property="og:image:alt" content="${escapeAttr(activeTitle)}" />`,
+      `<meta property="og:locale" content="${isEn ? 'en_US' : 'bn_BD'}" />`,
       `<meta name="twitter:card" content="summary_large_image" />`,
       `<meta name="twitter:title" content="${escapeAttr(activeTitle)}" />`,
       `<meta name="twitter:description" content="${escapeAttr(desc)}" />`,
       `<meta name="twitter:image" content="${escapeAttr(imgUrl)}" />`,
-    ].join('\n    ')
+      article.publishedAt ? `<meta property="article:published_time" content="${new Date(article.publishedAt).toISOString()}" />` : '',
+    ].filter(Boolean).join('\n    ')
 
     html = html.replace('</head>', `    ${dynamicTags}\n  </head>`)
 

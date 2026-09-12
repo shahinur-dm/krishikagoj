@@ -31,14 +31,18 @@ const app = express()
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
-app.get(['/news/:idOrSlug', '/api/news/:idOrSlug'], async (req, res) => {
-  await connectDb()
-  return renderArticleOgHtml(req, res, req.params.idOrSlug)
-})
-
-app.use((req, _res, next) => {
-  if (req.url && (req.url.startsWith('/news') || req.url.startsWith('/api/news'))) {
-    return next()
+app.use(async (req, res, next) => {
+  const urlToCheck = req.originalUrl || req.url || req.path || ''
+  if (req.method === 'GET' && (urlToCheck.includes('/news/') || urlToCheck.startsWith('/news/'))) {
+    try {
+      await connectDb()
+      const parts = urlToCheck.split('/news/')
+      const rawParam = (parts[1] || '').split('?')[0].split('#')[0]
+      return await renderArticleOgHtml(req, res, rawParam)
+    } catch (err) {
+      console.error('SSR OG error:', err)
+      return next()
+    }
   }
   if (req.url && !req.url.startsWith('/api')) {
     req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`

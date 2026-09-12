@@ -51,7 +51,7 @@ function PostMeta({ article, authorName }) {
   )
 }
 
-function ShareRow({ url, title, onFontChange }) {
+function ShareRow({ url, title, textSnippet, image, onFontChange }) {
   const { t } = useLang()
   const [copied, setCopied] = useState(false)
   const [isShareOpen, setShareOpen] = useState(false)
@@ -77,6 +77,34 @@ function ShareRow({ url, title, onFontChange }) {
 
   function popup(target) {
     window.open(target, 'Share This Post', 'width=640,height=450')
+  }
+
+  async function handleMainShare() {
+    const isMobile =
+      typeof navigator !== 'undefined' &&
+      typeof window !== 'undefined' &&
+      Boolean(navigator.share) &&
+      (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(
+        navigator.userAgent,
+      ) ||
+        window.matchMedia('(max-width: 991.98px)').matches ||
+        navigator.maxTouchPoints > 1)
+
+    if (isMobile && navigator.share) {
+      try {
+        const shareData = {
+          title: title || '',
+          text: textSnippet ? `${textSnippet}` : title || '',
+          url: url || (typeof window !== 'undefined' ? window.location.href : ''),
+        }
+        await navigator.share(shareData)
+        return
+      } catch (err) {
+        if (err && err.name === 'AbortError') return
+      }
+    }
+    // Desktop / Laptop or fallback
+    setShareOpen(true)
   }
 
   return (
@@ -146,7 +174,7 @@ function ShareRow({ url, title, onFontChange }) {
           className="kk-share-btn kk-share-main"
           aria-label={t.share}
           title={t.share}
-          onClick={() => setShareOpen(true)}
+          onClick={handleMainShare}
         >
           <i className="fa-solid fa-share" />
         </button>
@@ -361,7 +389,13 @@ function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT,
 
               <PostMeta article={article} authorName={authorName} />
 
-              <ShareRow url={url} title={title} onFontChange={onFontChange} />
+              <ShareRow
+                url={url}
+                title={title}
+                textSnippet={shortHeadline || activeExcerpt}
+                image={detailsImage}
+                onFontChange={onFontChange}
+              />
 
               {detailsImage ? (
                 <figure className="news-heading-pic">
