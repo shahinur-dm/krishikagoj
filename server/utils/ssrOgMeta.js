@@ -32,15 +32,22 @@ function escapeAttr(str) {
     .replace(/>/g, '&gt;')
 }
 
+export function getCleanArticleSlug(article) {
+  if (!article) return ''
+  const id = String(article._id || article.id || '')
+  const rawSlug = article.slug ? String(article.slug).trim() : ''
+  const isCleanAscii =
+    rawSlug &&
+    /^[a-zA-Z0-9_-]+$/.test(rawSlug) &&
+    !/[^\x00-\x7F]/.test(rawSlug) &&
+    rawSlug.length >= 3 &&
+    !/^[0-9a-fA-F]{24}$/.test(rawSlug)
+  return isCleanAscii ? rawSlug : id
+}
+
 function getProductionSiteUrl(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || ''
-  if (host.includes('krishikagoj.com')) {
-    return 'https://krishikagoj.com'
-  }
-  if (process.env.SITE_URL && !process.env.SITE_URL.includes('localhost')) {
-    return process.env.SITE_URL.replace(/\/$/, '')
-  }
-  if (host) {
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
     const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')
     return `${proto}://${host}`
   }
@@ -139,12 +146,23 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
     const pageTitle = `${activeTitle} | ${siteName}`
 
     const desc = getCleanOgDescription(article, isEn)
-    const cleanSlug = article.slug || String(article._id)
-    const canonicalUrl = `${siteUrl}/news/${encodeURIComponent(cleanSlug)}`
+    const cleanSlug = getCleanArticleSlug(article)
+    const canonicalUrl = `${siteUrl}/news/${cleanSlug}`
+
     const rawImg = article.image || '/logo.png'
-    const imgUrl = rawImg.startsWith('http')
-      ? rawImg
-      : `${siteUrl}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`
+    let imgUrl = rawImg
+    if (!imgUrl.startsWith('http')) {
+      imgUrl = `${siteUrl}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`
+    }
+    if (imgUrl.includes('krishikagoj-two.vercel.app')) {
+      imgUrl = imgUrl.replace('https://krishikagoj-two.vercel.app', 'https://krishikagoj.com')
+    }
+
+    let imageType = 'image/jpeg'
+    if (imgUrl.endsWith('.png')) imageType = 'image/png'
+    else if (imgUrl.endsWith('.webp')) imageType = 'image/webp'
+    else if (imgUrl.endsWith('.gif')) imageType = 'image/gif'
+    else if (imgUrl.endsWith('.svg')) imageType = 'image/svg+xml'
 
     let html = baseHtml
 
@@ -189,7 +207,7 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
       `<meta property="og:url" content="${escapeAttr(canonicalUrl)}" />`,
       `<meta property="og:image" content="${escapeAttr(imgUrl)}" />`,
       `<meta property="og:image:secure_url" content="${escapeAttr(imgUrl)}" />`,
-      `<meta property="og:image:type" content="image/jpeg" />`,
+      `<meta property="og:image:type" content="${imageType}" />`,
       `<meta property="og:image:width" content="1200" />`,
       `<meta property="og:image:height" content="630" />`,
       `<meta property="og:image:alt" content="${escapeAttr(activeTitle)}" />`,

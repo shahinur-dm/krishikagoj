@@ -35,9 +35,24 @@ function upsertJsonLd(id, data) {
   if (!existing) document.head.appendChild(el)
 }
 
-function absoluteUrl(pathOrUrl, origin = window.location.origin) {
+function getProductionOrigin() {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return window.location.origin
+    }
+  }
+  return 'https://krishikagoj.com'
+}
+
+function absoluteUrl(pathOrUrl, origin = getProductionOrigin()) {
   if (!pathOrUrl) return ''
-  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    if (pathOrUrl.includes('krishikagoj-two.vercel.app')) {
+      return pathOrUrl.replace('https://krishikagoj-two.vercel.app', 'https://krishikagoj.com')
+    }
+    return pathOrUrl
+  }
   if (pathOrUrl.startsWith('data:')) return pathOrUrl
   return `${origin}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`
 }
@@ -58,10 +73,16 @@ export default function SeoHead({
   siteName = 'কৃষিকাগজ',
 }) {
   useEffect(() => {
+    const prodOrigin = getProductionOrigin()
     const fullTitle = title || siteName
     const desc = (description || '').replace(/\s+/g, ' ').trim().slice(0, 200)
-    const url = canonical || (typeof window !== 'undefined' ? window.location.href.split('?')[0] : '')
-    const absImage = image ? absoluteUrl(image) : ''
+    let url = canonical || (typeof window !== 'undefined' ? window.location.href.split('?')[0] : '')
+    if (url.includes('krishikagoj-two.vercel.app')) {
+      url = url.replace('https://krishikagoj-two.vercel.app', 'https://krishikagoj.com')
+    } else if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      url = `${prodOrigin}${window.location.pathname}`
+    }
+    const absImage = image ? absoluteUrl(image, prodOrigin) : ''
 
     document.title = fullTitle
     upsertMeta('name', 'description', desc)

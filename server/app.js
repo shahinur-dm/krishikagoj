@@ -32,10 +32,19 @@ app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
 app.use(async (req, res, next) => {
-  const newsSlug =
+  let newsSlug =
     req.query?.__newsSlug ||
     req.headers['x-news-slug'] ||
     null
+
+  if (!newsSlug && req.url && req.url.includes('__newsSlug=')) {
+    try {
+      const qIndex = req.url.indexOf('__newsSlug=')
+      if (qIndex !== -1) {
+        newsSlug = req.url.slice(qIndex + 11).split('&')[0]?.split('#')[0]
+      }
+    } catch {}
+  }
 
   const urlToCheck = req.originalUrl || req.url || req.path || ''
   const matchedPath = req.headers['x-matched-path'] || req.headers['x-vercel-matched-path'] || ''

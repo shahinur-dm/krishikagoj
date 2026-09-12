@@ -276,9 +276,32 @@ export const api = {
 }
 
 export function articlePath(article) {
-  if (!article) return '/news'
-  const slug = article.slug || article.id || article._id
-  return `/news/${slug}`
+  return getArticlePath(article)
+}
+
+export function getPublicShareUrl(path = '') {
+  const p = path.startsWith('/') ? path : `/${path}`
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return `${window.location.origin}${p}`
+    }
+  }
+  return `https://krishikagoj.com${p}`
+}
+
+export function getArticlePath(article) {
+  if (!article) return '/'
+  const id = String(article.id || article._id || '')
+  const rawSlug = article.slug ? String(article.slug).trim() : ''
+  const isCleanAscii =
+    rawSlug &&
+    /^[a-zA-Z0-9_-]+$/.test(rawSlug) &&
+    !/[^\x00-\x7F]/.test(rawSlug) &&
+    rawSlug.length >= 3 &&
+    !/^[0-9a-fA-F]{24}$/.test(rawSlug)
+  const cleanKey = isCleanAscii ? rawSlug : id
+  return `/news/${cleanKey || 'article'}`
 }
 
 export function formatBnDate(value, lang = 'bn') {
@@ -309,14 +332,23 @@ export function formatBnTime(value, lang = 'bn') {
 
 export function mapArticle(a) {
   if (!a) return null
-  const id = a._id
-  const slug = a.slug || id
+  const id = String(a._id || a.id || '')
+  const rawSlug = a.slug ? String(a.slug).trim() : ''
+  const isCleanAscii =
+    rawSlug &&
+    /^[a-zA-Z0-9_-]+$/.test(rawSlug) &&
+    !/[^\x00-\x7F]/.test(rawSlug) &&
+    rawSlug.length >= 3 &&
+    !/^[0-9a-fA-F]{24}$/.test(rawSlug)
+  const slug = isCleanAscii ? rawSlug : id
+  const path = `/news/${slug}`
+
   return {
     id,
     title: a.title,
     titleEn: a.titleEn || '',
     slug,
-    path: `/news/${slug}`,
+    path,
     excerpt: a.excerpt,
     excerptEn: a.excerptEn || '',
     metaDescription: a.metaDescription || a.meta_description || '',

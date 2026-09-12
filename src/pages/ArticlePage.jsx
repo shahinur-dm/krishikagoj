@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, formatBnDate, formatBnTime, mapArticle } from '../api/client'
+import { api, formatBnDate, formatBnTime, mapArticle, getPublicShareUrl } from '../api/client'
 import Sidebar from '../components/Sidebar'
 import SafeImage from '../components/SafeImage'
 import SeoHead from '../components/SeoHead'
@@ -344,7 +344,7 @@ function ArticleLeftRail({ currentId }) {
 function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT, ads }) {
   const { t, text, isEn } = useLang()
   const { settings } = useSiteData()
-  const url = typeof window !== 'undefined' ? `${window.location.origin}${article.path}` : ''
+  const url = getPublicShareUrl(article.path)
   const gallery = article.raw?.images || []
   const title = text(article.title, article.titleEn)
   const shortHeadline = text(article.excerpt, article.excerptEn)?.trim()
@@ -560,6 +560,15 @@ export default function ArticlePage() {
         categoryRef.current = mapped.category || ''
         phaseRef.current = mapped.category ? 'same' : 'other'
         shownIdsRef.current.add(mapped.id)
+
+        if (typeof window !== 'undefined' && mapped.path) {
+          try {
+            const currentPath = window.location.pathname
+            if (currentPath !== mapped.path && decodeURIComponent(currentPath) !== mapped.path) {
+              window.history.replaceState(null, '', mapped.path)
+            }
+          } catch {}
+        }
       } catch (err) {
         if (alive) setError(err.message)
       } finally {
@@ -663,11 +672,7 @@ export default function ArticlePage() {
         image={article.image || settings?.seo?.ogImage || settings?.logo}
         type="article"
         siteName={siteName}
-        canonical={
-          typeof window !== 'undefined'
-            ? `${window.location.origin}${article.path}`
-            : undefined
-        }
+        canonical={getPublicShareUrl(article.path)}
         jsonLd={{
           '@context': 'https://schema.org',
           '@type': 'NewsArticle',

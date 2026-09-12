@@ -3,12 +3,17 @@ import Article from '../models/Article.js'
 import Category from '../models/Category.js'
 import SiteSetting from '../models/SiteSetting.js'
 
+import { getCleanArticleSlug } from '../utils/ssrOgMeta.js'
+
 const router = Router()
 
 function siteOrigin(req) {
-  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https'
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'krishi-kagos.vercel.app'
-  return `${proto}://${host}`.replace(/\/$/, '')
+  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host || ''
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http'
+    return `${proto}://${host}`
+  }
+  return 'https://krishikagoj.com'
 }
 
 router.get('/sitemap.xml', async (req, res) => {
@@ -33,7 +38,7 @@ router.get('/sitemap.xml', async (req, res) => {
         changefreq: 'daily',
       })),
       ...articles.map((a) => ({
-        loc: `${origin}/news/${a.slug || a._id}`,
+        loc: `${origin}/news/${getCleanArticleSlug(a)}`,
         lastmod: a.updatedAt || a.publishedAt,
         priority: '0.8',
         changefreq: 'weekly',
