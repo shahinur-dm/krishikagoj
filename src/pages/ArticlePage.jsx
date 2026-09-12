@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar'
 import SafeImage from '../components/SafeImage'
 import SeoHead from '../components/SeoHead'
 import AdSlider from '../components/AdSlider'
+import { BrandLogo } from '../components/BrandLogo'
 import { useSiteData } from '../context/SiteDataContext'
 import { useLang } from '../context/LanguageContext'
 import { cleanArticleHtml } from '../utils/cleanArticleHtml'
@@ -393,6 +394,22 @@ function ArticleBlock({ article, isFirst, onFontChange, fontSize = DEFAULT_FONT,
                   </div>
                 </div>
               )}
+
+              <div className="kk-print-footer">
+                <div className="kk-print-divider" />
+                <div className="kk-print-logo-wrap">
+                  <BrandLogo className="kk-print-logo" />
+                </div>
+                <div className="kk-print-contact">
+                  <div className="kk-print-contact-item">
+                    <i className="fa-solid fa-phone" /> {text(settings?.phoneBn || settings?.hotline || '১৬১২৩', settings?.phoneEn)}
+                  </div>
+                  <div className="kk-print-contact-item">
+                    <i className="fa-solid fa-envelope" /> {settings?.email || 'info@krishikagoj.com'}
+                  </div>
+                </div>
+                <div className="kk-print-divider" />
+              </div>
 
               <div className="kk-post-tail">
                 <span>
