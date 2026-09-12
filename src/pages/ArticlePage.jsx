@@ -94,7 +94,6 @@ function ShareRow({ url, title, textSnippet, image, onFontChange }) {
       try {
         const shareData = {
           title: title || '',
-          text: textSnippet ? `${textSnippet}` : title || '',
           url: url || (typeof window !== 'undefined' ? window.location.href : ''),
         }
         await navigator.share(shareData)
@@ -145,7 +144,7 @@ function ShareRow({ url, title, textSnippet, image, onFontChange }) {
         <a
           className="kk-share-btn kk-share-wa"
           aria-label="WhatsApp"
-          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${title} ${url}`)}`}
+          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(url)}`}
           target="_blank"
           rel="noreferrer"
         >
@@ -291,7 +290,7 @@ function ShareRow({ url, title, textSnippet, image, onFontChange }) {
               {/* WhatsApp */}
               <a
                 className="kk-share-option"
-                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${title} ${url}`)}`}
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(url)}`}
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => setShareOpen(false)}

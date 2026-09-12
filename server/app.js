@@ -32,13 +32,27 @@ app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
 app.use(async (req, res, next) => {
+  const newsSlug =
+    req.query?.__newsSlug ||
+    req.headers['x-news-slug'] ||
+    null
+
   const urlToCheck = req.originalUrl || req.url || req.path || ''
-  if (req.method === 'GET' && (urlToCheck.includes('/news/') || urlToCheck.startsWith('/news/'))) {
+  const matchedPath = req.headers['x-matched-path'] || req.headers['x-vercel-matched-path'] || ''
+
+  let slugFromUrl = null
+  if (urlToCheck.includes('/news/')) {
+    slugFromUrl = urlToCheck.split('/news/')[1]?.split('?')[0]?.split('#')[0]
+  } else if (matchedPath.includes('/news/')) {
+    slugFromUrl = matchedPath.split('/news/')[1]?.split('?')[0]?.split('#')[0]
+  }
+
+  const targetSlug = newsSlug || slugFromUrl
+
+  if (req.method === 'GET' && targetSlug) {
     try {
       await connectDb()
-      const parts = urlToCheck.split('/news/')
-      const rawParam = (parts[1] || '').split('?')[0].split('#')[0]
-      return await renderArticleOgHtml(req, res, rawParam)
+      return await renderArticleOgHtml(req, res, targetSlug)
     } catch (err) {
       console.error('SSR OG error:', err)
       return next()

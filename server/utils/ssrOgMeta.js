@@ -32,6 +32,57 @@ function escapeAttr(str) {
     .replace(/>/g, '&gt;')
 }
 
+function getProductionSiteUrl(req) {
+  const host = req.headers['x-forwarded-host'] || req.headers.host || ''
+  if (host.includes('krishikagoj.com')) {
+    return 'https://krishikagoj.com'
+  }
+  if (process.env.SITE_URL && !process.env.SITE_URL.includes('localhost')) {
+    return process.env.SITE_URL.replace(/\/$/, '')
+  }
+  if (host) {
+    const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')
+    return `${proto}://${host}`
+  }
+  return 'https://krishikagoj.com'
+}
+
+function getCleanOgDescription(article, isEn = false) {
+  const cleanBody = stripHtml(isEn && article.bodyEn ? article.bodyEn : article.body)
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const explicitDesc = (
+    (isEn && article.excerptEn ? article.excerptEn : '') ||
+    article.metaDescription ||
+    article.excerpt ||
+    ''
+  ).replace(/\s+/g, ' ').trim()
+
+  let desc = ''
+  if (explicitDesc && explicitDesc.length >= 60) {
+    desc = explicitDesc
+  } else if (cleanBody) {
+    if (explicitDesc && !cleanBody.startsWith(explicitDesc)) {
+      desc = `${explicitDesc} — ${cleanBody}`
+    } else {
+      desc = cleanBody
+    }
+  } else {
+    desc = explicitDesc || (isEn
+      ? 'Krishi Kagoj — Agriculture news, crops, livestock, fisheries, technology and farmers stories.'
+      : 'কৃষিকাগজ — বাংলাদেশের কৃষি খবর, ফসল, প্রাণিসম্পদ, মৎস্য, প্রযুক্তি ও কৃষকের কথা।')
+  }
+
+  // Target 3-4 lines: 160-220 characters, ending cleanly at a word boundary
+  if (desc.length > 220) {
+    const cut = desc.slice(0, 220)
+    const lastSpace = cut.lastIndexOf(' ')
+    desc = (lastSpace > 120 ? cut.slice(0, lastSpace) : cut) + '...'
+  }
+  return desc
+}
+
 export async function renderArticleOgHtml(req, res, idOrSlug) {
   try {
     const rawIdOrSlug = String(idOrSlug || '').trim()
@@ -77,9 +128,7 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
       return res.status(200).type('html').send(baseHtml)
     }
 
-    const host = req.headers['x-forwarded-host'] || req.headers.host || 'www.krishikagoj.com'
-    const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')
-    const siteUrl = `${proto}://${host}`
+    const siteUrl = getProductionSiteUrl(req)
 
     const isEn =
       req.query.lang === 'en' ||
@@ -89,17 +138,7 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
     const activeTitle = (isEn && article.titleEn ? article.titleEn : article.title) || siteName
     const pageTitle = `${activeTitle} | ${siteName}`
 
-    const rawDesc =
-      (isEn && article.excerptEn ? article.excerptEn : '') ||
-      article.metaDescription ||
-      article.excerpt ||
-      article.shortHeadline ||
-      stripHtml(isEn && article.bodyEn ? article.bodyEn : article.body) ||
-      (isEn
-        ? 'Krishi Kagoj — Agriculture news, crops, livestock, fisheries, technology and farmers stories.'
-        : 'কৃষিকাগজ — বাংলাদেশের কৃষি খবর, ফসল, প্রাণিসম্পদ, মৎস্য, প্রযুক্তি ও কৃষকের কথা।')
-
-    const desc = rawDesc.replace(/\s+/g, ' ').trim().slice(0, 220)
+    const desc = getCleanOgDescription(article, isEn)
     const cleanSlug = article.slug || String(article._id)
     const canonicalUrl = `${siteUrl}/news/${encodeURIComponent(cleanSlug)}`
     const rawImg = article.image || '/logo.png'
@@ -150,8 +189,12 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
       `<meta property="og:url" content="${escapeAttr(canonicalUrl)}" />`,
       `<meta property="og:image" content="${escapeAttr(imgUrl)}" />`,
       `<meta property="og:image:secure_url" content="${escapeAttr(imgUrl)}" />`,
+      `<meta property="og:image:type" content="image/jpeg" />`,
+      `<meta property="og:image:width" content="1200" />`,
+      `<meta property="og:image:height" content="630" />`,
       `<meta property="og:image:alt" content="${escapeAttr(activeTitle)}" />`,
       `<meta property="og:locale" content="${isEn ? 'en_US' : 'bn_BD'}" />`,
+      `<link rel="image_src" href="${escapeAttr(imgUrl)}" />`,
       `<meta name="twitter:card" content="summary_large_image" />`,
       `<meta name="twitter:title" content="${escapeAttr(activeTitle)}" />`,
       `<meta name="twitter:description" content="${escapeAttr(desc)}" />`,
@@ -161,7 +204,7 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
 
     html = html.replace('</head>', `    ${dynamicTags}\n  </head>`)
 
-    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600')
+    res.set('Cache-Control', 'public, max-age=10, s-maxage=60, stale-while-revalidate=120')
     return res.status(200).type('html').send(html)
   } catch (err) {
     console.error('SSR OG Meta Error:', err)
