@@ -279,7 +279,9 @@ export default function AddPostCkeditor({ value, onChange }) {
         editor = CKEDITOR.appendTo(hostRef.current, {
           toolbar: FULL_TOOLBAR,
           height: 280,
-          resize_enabled: false,
+          resize_enabled: true,
+          resize_dir: 'vertical',
+          resize_minHeight: 200,
           removePlugins: 'exportpdf',
           versionCheck: false,
           allowedContent: true,
