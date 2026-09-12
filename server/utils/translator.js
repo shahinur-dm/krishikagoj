@@ -136,6 +136,28 @@ async function translateWithAiSetting(text, from = 'bn', to = 'en') {
   }
 }
 
+function chunkText(text, maxLen = 1200) {
+  if (text.length <= maxLen) return [text]
+  const chunks = []
+  let remaining = text
+  while (remaining.length > 0) {
+    if (remaining.length <= maxLen) {
+      chunks.push(remaining)
+      break
+    }
+    let splitIdx = remaining.lastIndexOf('\n', maxLen)
+    if (splitIdx === -1 || splitIdx < maxLen / 2) {
+      splitIdx = remaining.lastIndexOf(' ', maxLen)
+    }
+    if (splitIdx === -1 || splitIdx < maxLen / 4) {
+      splitIdx = maxLen
+    }
+    chunks.push(remaining.slice(0, splitIdx).trim())
+    remaining = remaining.slice(splitIdx).trim()
+  }
+  return chunks.filter(Boolean)
+}
+
 /**
  * Translates a single text string with multi-tier fallback and caching
  */
@@ -147,21 +169,21 @@ export async function translateText(text, from = 'bn', to = 'en') {
   const cached = getCached(cleaned, from, to)
   if (cached) return cached
 
-  // Split into chunks if text is very long (e.g. > 1500 chars)
-  if (cleaned.length > 1500) {
-    const paragraphs = cleaned.split(/\n\s*\n/)
-    const translatedParagraphs = []
-    for (const p of paragraphs) {
-      if (p.trim()) {
-        const trans = await translateText(p.trim(), from, to)
-        translatedParagraphs.push(trans)
-      } else {
-        translatedParagraphs.push('')
+  // Split into chunks if text is very long
+  if (cleaned.length > 1200) {
+    const chunks = chunkText(cleaned, 1200)
+    if (chunks.length > 1) {
+      const translatedChunks = []
+      for (const ch of chunks) {
+        if (ch) {
+          const trans = await translateText(ch, from, to)
+          translatedChunks.push(trans)
+        }
       }
+      const result = translatedChunks.join(' ')
+      setCached(cleaned, result, from, to)
+      return result
     }
-    const result = translatedParagraphs.join('\n\n')
-    setCached(cleaned, result, from, to)
-    return result
   }
 
   // Tier 1: Google GTX
@@ -212,37 +234,66 @@ export async function translateHtml(html, from = 'bn', to = 'en') {
   if (cached) return cached
 
   // Tokenize HTML into tags and text segments
-  // Match tags like <tag ...>, </tag>, <!-- comment -->
   const tagRegex = /(<[^>]+>)/g
   const tokens = str.split(tagRegex)
 
-  const translatedTokens = []
+  const textSegments = []
+  const textIndices = []
 
-  for (const token of tokens) {
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
     if (!token) continue
     if (token.startsWith('<') && token.endsWith('>')) {
-      // It is an HTML tag — keep unmodified
-      translatedTokens.push(token)
-    } else {
-      // It is plain text content inside/between tags
-      const trimmed = token.trim()
-      if (!trimmed) {
-        translatedTokens.push(token) // keep whitespace
-      } else {
-        try {
-          const translated = await translateText(trimmed, from, to)
-          // Preserve leading/trailing whitespace around the token
-          const leadingSpace = token.match(/^\s*/)?.[0] || ''
-          const trailingSpace = token.match(/\s*$/)?.[0] || ''
-          translatedTokens.push(`${leadingSpace}${translated}${trailingSpace}`)
-        } catch {
-          translatedTokens.push(token)
-        }
-      }
+      // HTML tag
+      continue
+    }
+    const trimmed = token.trim()
+    if (trimmed) {
+      textIndices.push(i)
+      textSegments.push(trimmed)
     }
   }
 
-  const finalHtml = translatedTokens.join('')
+  if (textSegments.length === 0) {
+    return str
+  }
+
+  // Join segments with unique delimiter for single-request translation
+  const DELIM = ' ___TK___ '
+  const combinedText = textSegments.join(DELIM)
+
+  try {
+    const translatedCombined = await translateText(combinedText, from, to)
+    const translatedParts = translatedCombined.split(/___TK___/i).map((s) => s.trim())
+
+    if (translatedParts.length === textSegments.length) {
+      textIndices.forEach((idx, i) => {
+        const orig = tokens[idx]
+        const leadingSpace = orig.match(/^\s*/)?.[0] || ''
+        const trailingSpace = orig.match(/\s*$/)?.[0] || ''
+        tokens[idx] = `${leadingSpace}${translatedParts[i]}${trailingSpace}`
+      })
+    } else {
+      // Fallback if delimiters were altered by translation engine
+      for (let i = 0; i < textIndices.length; i++) {
+        const idx = textIndices[i]
+        const orig = tokens[idx]
+        const trimmed = orig.trim()
+        try {
+          const trans = await translateText(trimmed, from, to)
+          const leadingSpace = orig.match(/^\s*/)?.[0] || ''
+          const trailingSpace = orig.match(/\s*$/)?.[0] || ''
+          tokens[idx] = `${leadingSpace}${trans}${trailingSpace}`
+        } catch {
+          // keep original
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Translator] translateHtml combined batch failed:', err.message)
+  }
+
+  const finalHtml = tokens.join('')
   setCached(str, finalHtml, from, to)
   return finalHtml
 }

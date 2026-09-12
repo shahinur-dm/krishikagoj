@@ -99,6 +99,7 @@ function slimArticle(a, imageW = 480) {
           _id: a.subcategory._id || a.subcategory,
           slug: a.subcategory.slug || '',
           nameBn: a.subcategory.nameBn || '',
+          nameEn: a.subcategory.nameEn || '',
         }
       : null,
   }
@@ -131,7 +132,7 @@ async function buildTopicGrid(settings) {
   })
     .select(SLIM)
     .populate('category', 'name nameEn slug')
-    .populate('subcategory', 'nameBn slug')
+    .populate('subcategory', 'nameBn nameEn slug')
     .sort({ publishedAt: -1 })
     .lean()
 
@@ -273,7 +274,7 @@ router.get('/', async (req, res) => {
       Article.find({ isPublished: true })
         .select(SLIM)
         .populate('category', 'name nameEn slug')
-        .populate('subcategory', 'nameBn slug')
+        .populate('subcategory', 'nameBn nameEn slug')
         .sort({ publishedAt: -1 })
         .limit(160)
         .lean(),
@@ -316,7 +317,7 @@ router.get('/', async (req, res) => {
         .limit(20)
         .lean(),
       Opinion.find({ status: 'published', isActive: { $ne: false } })
-        .select('name title details image createdAt')
+        .select('name title titleEn details image createdAt')
         .sort({ createdAt: -1 })
         .limit(10)
         .lean(),
@@ -502,6 +503,7 @@ router.get('/', async (req, res) => {
         _id: o._id,
         name: o.name,
         title: o.title,
+        titleEn: o.titleEn || '',
         details: o.details || '',
         image: o.image || '',
         createdAt: o.createdAt,
@@ -514,8 +516,8 @@ router.get('/', async (req, res) => {
         icon: t.icon || 'fa-solid fa-leaf',
         image: t.image || '',
         url: t.url || '',
-        category: t.category ? { _id: t.category._id, name: t.category.name, slug: t.category.slug } : null,
-        subcategory: t.subcategory ? { _id: t.subcategory._id, nameBn: t.subcategory.nameBn, slug: t.subcategory.slug } : null,
+        category: t.category ? { _id: t.category._id, name: t.category.name, nameEn: t.category.nameEn || '', slug: t.category.slug } : null,
+        subcategory: t.subcategory ? { _id: t.subcategory._id, nameBn: t.subcategory.nameBn, nameEn: t.subcategory.nameEn || '', slug: t.subcategory.slug } : null,
         order: t.order || 0,
         isActive: t.isActive !== false,
       })),

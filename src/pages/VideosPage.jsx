@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { Link } from 'react-router-dom'
 import SafeImage from '../components/SafeImage'
+import { useLang } from '../context/LanguageContext'
 
 function getEmbedUrl(url) {
   if (!url) return ''
@@ -13,6 +14,7 @@ function getEmbedUrl(url) {
 export default function VideosPage() {
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(true)
+  const { t, text } = useLang()
 
   useEffect(() => {
     api.getVideos()
@@ -21,7 +23,7 @@ export default function VideosPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="container py-5 text-center">লোড হচ্ছে...</div>
+  if (loading) return <div className="container py-5 text-center">{t.loading}</div>
 
   return (
     <div className="container mt-4">
@@ -29,7 +31,7 @@ export default function VideosPage() {
         <div className="section-title-flex">
           <div className="d-flex align-items-center">
             <i className="fa-solid fa-circle-play" style={{ color: '#c62828', fontSize: 22 }} />
-            <h3>সকল ভিডিও সংবাদ</h3>
+            <h3>{t.videoGallery}</h3>
           </div>
         </div>
         <div className="row g-3">
@@ -37,18 +39,18 @@ export default function VideosPage() {
             <div className="col-lg-3 col-md-4 col-sm-6" key={video._id}>
               <a href={video.embedCode || '#'} target={video.embedCode ? "_blank" : "_self"} rel="noreferrer" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
                 <div className="video-item position-relative">
-                  <SafeImage className="img-fluid rounded" src={video.thumbnail || '/placeholder-news.svg'} alt={video.title} style={{ aspectRatio: '16/9', objectFit: 'cover', width: '100%' }} />
+                  <SafeImage className="img-fluid rounded" src={video.thumbnail || '/placeholder-news.svg'} alt={text(video.title, video.titleEn)} style={{ aspectRatio: '16/9', objectFit: 'cover', width: '100%' }} />
                   <span className="position-absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 5, color: '#fff', fontSize: '40px' }}>
                     <i className="fa-solid fa-circle-play" />
                   </span>
                 </div>
                 <div className="mt-2">
-                  <h4 style={{ fontSize: '18px', fontWeight: 600 }}>{video.title}</h4>
+                  <h4 style={{ fontSize: '18px', fontWeight: 600 }}>{text(video.title, video.titleEn)}</h4>
                 </div>
               </a>
             </div>
           ))}
-          {videos.length === 0 && <div className="col-12 text-center text-muted">কোনো ভিডিও পাওয়া যায়নি</div>}
+          {videos.length === 0 && <div className="col-12 text-center text-muted">{t.noResults}</div>}
         </div>
       </div>
     </div>

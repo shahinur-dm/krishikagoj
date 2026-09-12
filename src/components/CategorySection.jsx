@@ -9,6 +9,14 @@ import { useLang } from '../context/LanguageContext'
 
 const BN_NUM = ['১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯', '১০', '১১', '১২']
 
+function renderItemDate(item, lang) {
+  if (!item) return ''
+  const effectiveLang =
+    lang || (typeof document !== 'undefined' ? document.documentElement.lang || 'bn' : 'bn')
+  if (item.publishedAt) return formatBnDate(item.publishedAt, effectiveLang)
+  return item.date || ''
+}
+
 function articlePath(item) {
   return item.path || `/news/${item.slug || item.id}`
 }
@@ -140,58 +148,65 @@ function Grid4({ title, slug, articles }) {
   )
 }
 
-function SpotlightSelectList({ items, text, selectedId, onSelect }) {
-  return items.map((item) => (
-    <div key={item.id} className="news-list binodon-item">
-      <Link
-        to={articlePath(item)}
-        className={item.id === selectedId ? 'is-proshason-selected' : undefined}
-        onClick={(event) => {
-          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-          event.preventDefault()
-          onSelect(item.id)
-        }}
-      >
-        <div className="binodon-item-row">
-          <div className="binodon-item-text">
-            <h4 className="title">{text(item.title, item.titleEn)}</h4>
-            {item.date ? <span>{item.date}</span> : null}
-          </div>
-          <div className="binodon-item-thumb">
-            <div className="img-zoom-hover">
-              <SafeImage src={item.image} alt={text(item.title, item.titleEn)} className="img-fluid" />
+function SpotlightSelectList({ items, text, selectedId, onSelect, lang }) {
+  return items.map((item) => {
+    const dateStr = renderItemDate(item, lang)
+    return (
+      <div key={item.id} className="news-list binodon-item">
+        <Link
+          to={articlePath(item)}
+          className={item.id === selectedId ? 'is-proshason-selected' : undefined}
+          onClick={(event) => {
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+            event.preventDefault()
+            onSelect(item.id)
+          }}
+        >
+          <div className="binodon-item-row">
+            <div className="binodon-item-text">
+              <h4 className="title">{text(item.title, item.titleEn)}</h4>
+              {dateStr ? <span>{dateStr}</span> : null}
+            </div>
+            <div className="binodon-item-thumb">
+              <div className="img-zoom-hover">
+                <SafeImage src={item.image} alt={text(item.title, item.titleEn)} className="img-fluid" />
+              </div>
             </div>
           </div>
-        </div>
-      </Link>
-    </div>
-  ))
+        </Link>
+      </div>
+    )
+  })
 }
 
-function SpotlightThumbList({ items, text }) {
-  return items.map((item) => (
-    <div key={item.id} className="news-list binodon-item">
-      <Link to={articlePath(item)}>
-        <div className="binodon-item-row">
-          <div className="binodon-item-text">
-            <h4 className="title">{text(item.title, item.titleEn)}</h4>
-            {item.date ? <span>{item.date}</span> : null}
-          </div>
-          <div className="binodon-item-thumb">
-            <div className="img-zoom-hover">
-              <SafeImage src={item.image} alt={text(item.title, item.titleEn)} className="img-fluid" />
+function SpotlightThumbList({ items, text, lang }) {
+  return items.map((item) => {
+    const dateStr = renderItemDate(item, lang)
+    return (
+      <div key={item.id} className="news-list binodon-item">
+        <Link to={articlePath(item)}>
+          <div className="binodon-item-row">
+            <div className="binodon-item-text">
+              <h4 className="title">{text(item.title, item.titleEn)}</h4>
+              {dateStr ? <span>{dateStr}</span> : null}
+            </div>
+            <div className="binodon-item-thumb">
+              <div className="img-zoom-hover">
+                <SafeImage src={item.image} alt={text(item.title, item.titleEn)} className="img-fluid" />
+              </div>
             </div>
           </div>
-        </div>
-      </Link>
-    </div>
-  ))
+        </Link>
+      </div>
+    )
+  })
 }
 
-function SpotlightFeatured({ item, text }) {
+function SpotlightFeatured({ item, text, lang }) {
   if (!item) return null
   const title = text(item.title, item.titleEn)
   const excerpt = text(item.excerpt, item.excerptEn)
+  const dateStr = renderItemDate(item, lang)
   return (
     <div className="news-list pg-details binodon-featured-card">
       <Link to={articlePath(item)}>
@@ -200,10 +215,10 @@ function SpotlightFeatured({ item, text }) {
         </div>
         <h4 className="title featured-main-title">{title}</h4>
         {excerpt ? <p className="description featured-subtitle">{excerpt}</p> : null}
-        {item.date ? (
+        {dateStr ? (
           <span className="featured-date">
             <i className="fa-regular fa-clock me-1" />
-            {item.date}
+            {dateStr}
           </span>
         ) : null}
       </Link>
@@ -211,7 +226,8 @@ function SpotlightFeatured({ item, text }) {
   )
 }
 
-function SpecialReportCard({ item, text }) {
+function SpecialReportCard({ item, text, lang }) {
+  const dateStr = renderItemDate(item, lang)
   return (
     <Link to={articlePath(item)} className="bishesh-card">
       <div className="bishesh-thumb">
@@ -221,7 +237,7 @@ function SpecialReportCard({ item, text }) {
       </div>
       <div className="bishesh-copy">
         <h4 className="title">{text(item.title, item.titleEn)}</h4>
-        {item.date ? <span>{item.date}</span> : null}
+        {dateStr ? <span>{dateStr}</span> : null}
         {item.excerpt ? <p className="description">{text(item.excerpt, item.excerptEn)}</p> : null}
       </div>
     </Link>
@@ -351,7 +367,7 @@ function CategoryMotamot({ title, slug, articles = [], embedded = false }) {
               <h4 className="title">{text(item.title, item.titleEn)}</h4>
               <span className="motamot-side-meta">
                 {t.author} {meta.name}
-                {item.date ? ` · ${item.date}` : ''}
+                {renderItemDate(item, lang) ? ` · ${renderItemDate(item, lang)}` : ''}
               </span>
             </span>
           </Link>
@@ -573,7 +589,7 @@ function CategorySpotlight({
   companion = null,
   sideCategory = null,
 }) {
-  const { text } = useLang()
+  const { text, lang } = useLang()
   const { ads } = useSiteData()
   const featured = articles[0]
   const thumbList = articles.slice(1, 4)
@@ -631,7 +647,7 @@ function CategorySpotlight({
                           </div>
                           <div className="col-7">
                             <h4 className="title">{text(item.title, item.titleEn)}</h4>
-                            {item.date ? <span>{item.date}</span> : null}
+                            {renderItemDate(item, lang) ? <span>{renderItemDate(item, lang)}</span> : null}
                           </div>
                         </div>
                       </Link>
@@ -645,7 +661,7 @@ function CategorySpotlight({
                     <div key={item.id} className="news-list-arrow">
                       <Link to={articlePath(item)}>
                         <h4 className="title">{text(item.title, item.titleEn)}</h4>
-                        {item.date ? <span>{item.date}</span> : null}
+                        {renderItemDate(item, lang) ? <span>{renderItemDate(item, lang)}</span> : null}
                       </Link>
                     </div>
                   ))}

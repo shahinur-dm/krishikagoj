@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { api, mapArticle } from '../api/client'
+import { api, mapArticle, formatBnDate } from '../api/client'
 import SafeImage from '../components/SafeImage'
 import SeoHead from '../components/SeoHead'
 import { useSiteData } from '../context/SiteDataContext'

@@ -4,7 +4,9 @@ const opinionSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     title: { type: String, required: true, trim: true },
+    titleEn: { type: String, default: '' },
     details: { type: String, default: '' },
+    detailsEn: { type: String, default: '' },
     image: { type: String, default: '' },
     language: { type: String, default: 'bn' },
     status: { type: String, enum: ['draft', 'published'], default: 'published' },

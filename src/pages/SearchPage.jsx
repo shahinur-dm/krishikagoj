@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { api, mapArticle } from '../api/client'
+import { api, mapArticle, formatBnDate } from '../api/client'
 import SafeImage from '../components/SafeImage'
 import SeoHead from '../components/SeoHead'
 import { useSiteData } from '../context/SiteDataContext'
@@ -11,7 +11,7 @@ export default function SearchPage() {
   const navigate = useNavigate()
   const q = (params.get('q') || '').trim()
   const { settings } = useSiteData()
-  const { t, text } = useLang()
+  const { t, text, lang } = useLang()
   const [input, setInput] = useState(q)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
@@ -76,23 +76,26 @@ export default function SearchPage() {
           {error && <p className="p-3 text-danger">{error}</p>}
           {!loading && q && !items.length && <p className="p-3">{t.noResults}</p>}
           <div className="row px-2 pb-3">
-            {items.map((item) => (
-              <div key={item.id} className="col-md-6">
-                <div className="news-list">
-                  <Link to={item.path || `/news/${item.slug || item.id}`} className="row g-2">
-                    <div className="col-4">
-                      <div className="img-zoom-hover">
-                        <SafeImage src={item.image} alt={text(item.title, item.titleEn)} width={320} />
+            {items.map((item) => {
+              const dateStr = item.publishedAt ? formatBnDate(item.publishedAt, lang) : item.date
+              return (
+                <div key={item.id} className="col-md-6">
+                  <div className="news-list">
+                    <Link to={item.path || `/news/${item.slug || item.id}`} className="row g-2">
+                      <div className="col-4">
+                        <div className="img-zoom-hover">
+                          <SafeImage src={item.image} alt={text(item.title, item.titleEn)} width={320} />
+                        </div>
                       </div>
-                    </div>
-                    <div className="col-8">
-                      <h4 className="title">{text(item.title, item.titleEn)}</h4>
-                      {item.date && <span>{item.date}</span>}
-                    </div>
-                  </Link>
+                      <div className="col-8">
+                        <h4 className="title">{text(item.title, item.titleEn)}</h4>
+                        {dateStr && <span>{dateStr}</span>}
+                      </div>
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>

@@ -23,8 +23,11 @@ function NewsSm({ item, label }) {
   )
 }
 
-function MidNewsRow({ item, label }) {
+import { formatBnDate } from '../api/client'
+
+function MidNewsRow({ item, label, lang }) {
   if (!item) return null
+  const dateStr = item.publishedAt ? formatBnDate(item.publishedAt, lang) : item.date
   return (
     <article className="lead-mid-item">
       <Link to={item.path || `/news/${item.slug || item.id}`}>
@@ -33,9 +36,9 @@ function MidNewsRow({ item, label }) {
         </div>
         <div className="lead-mid-body">
           <h4 className="title">{label}</h4>
-          {item.date ? (
+          {dateStr ? (
             <span className="lead-mid-date">
-              <i className="fa-regular fa-clock" /> {item.date}
+              <i className="fa-regular fa-clock" /> {dateStr}
             </span>
           ) : null}
         </div>
@@ -44,8 +47,9 @@ function MidNewsRow({ item, label }) {
   )
 }
 
-function StoryListRow({ item, label }) {
+function StoryListRow({ item, label, lang }) {
   if (!item) return null
+  const dateStr = item.publishedAt ? formatBnDate(item.publishedAt, lang) : item.date
   return (
     <article className="lead-story-item">
       <Link to={item.path || `/news/${item.slug || item.id}`}>
@@ -54,9 +58,9 @@ function StoryListRow({ item, label }) {
         </div>
         <div className="lead-story-body">
           <h4 className="title">{label}</h4>
-          {item.date ? (
+          {dateStr ? (
             <span className="lead-story-date">
-              <i className="fa-regular fa-clock" /> {item.date}
+              <i className="fa-regular fa-clock" /> {dateStr}
             </span>
           ) : null}
         </div>
@@ -141,7 +145,7 @@ export default function LeadSection({
   recent = [],
   leadLayout = null,
 }) {
-  const { t, text, isEn } = useLang()
+  const { t, text, isEn, lang } = useLang()
   const { settings } = useSiteData()
   const slots = resolveSlots(leadLayout, featured, headlines, latest, popular, recent)
   if (!slots.lead && !slots.story && !slots.grid.length) return null
@@ -222,7 +226,7 @@ export default function LeadSection({
           <div className="lead-3col-col lead-3col-mid">
             <div className="common-border-box lead-3col-box lead-side-panel lead-side-mid">
               {slots.mid.map((item, i) => (
-                <MidNewsRow key={item.id || `m-${i}`} item={item} label={labelOf(item)} />
+                <MidNewsRow key={item.id || `m-${i}`} item={item} label={labelOf(item)} lang={lang} />
               ))}
             </div>
           </div>
@@ -251,7 +255,7 @@ export default function LeadSection({
               ) : null}
               <div className="lead-side-story-list">
                 {slots.storyList.map((item, i) => (
-                  <StoryListRow key={item.id || `s-${i}`} item={item} label={labelOf(item)} />
+                  <StoryListRow key={item.id || `s-${i}`} item={item} label={labelOf(item)} lang={lang} />
                 ))}
               </div>
             </div>

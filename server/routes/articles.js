@@ -109,7 +109,7 @@ function bustCaches() {
 function populateArticle(q) {
   return q
     .populate('category', 'name nameEn slug')
-    .populate('subcategory', 'nameBn slug')
+    .populate('subcategory', 'nameBn nameEn slug')
     .populate('authorUser', 'name email')
 }
 
