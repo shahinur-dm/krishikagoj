@@ -34,16 +34,6 @@ export default function AddNewPostForm({
   const slugInvalid = Boolean(form.customUrl && SLUG_BAD.test(form.customUrl))
   const fileRef = useRef(null)
 
-  function setHomePosition(value) {
-    setForm((f) => ({
-      ...f,
-      homePosition: value,
-      headline: value === 'headline' ? true : f.headline,
-      featured: value === 'featured' ? true : f.featured,
-      latest: value === 'latest' ? true : f.latest,
-      bigthumbnail: value === 'bigthumbnail' ? true : f.bigthumbnail,
-    }))
-  }
 
 
   function resetForm() {
@@ -160,7 +150,9 @@ export default function AddNewPostForm({
                   </label>
                   <select
                     value={form.category}
-                    onChange={(e) => update('category', e.target.value)}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, category: e.target.value, subcategory: '' }))
+                    }
                     required
                   >
                     <option value="">Select Category</option>
@@ -177,13 +169,17 @@ export default function AddNewPostForm({
 
               <div className="anp-row anp-row-home">
                 <div className="admin-form-group">
-                  <label>Home Position</label>
-                  <select value={form.homePosition || ''} onChange={(e) => setHomePosition(e.target.value)}>
-                    <option value="">Select Home Page</option>
-                    <option value="headline">Headline</option>
-                    <option value="featured">Featured</option>
-                    <option value="latest">Latest</option>
-                    <option value="bigthumbnail">Big Thumbnail</option>
+                  <label>Sub Category</label>
+                  <select
+                    value={form.subcategory || ''}
+                    onChange={(e) => update('subcategory', e.target.value)}
+                  >
+                    <option value="">Select Sub Category</option>
+                    {subcategories.map((s) => (
+                      <option key={s._id} value={s._id}>
+                        {s.nameBn}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="admin-form-group">
