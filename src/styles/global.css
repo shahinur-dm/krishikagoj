@@ -4745,7 +4745,7 @@ section[class*='home-layout-'] .img-zoom-hover img {
 
 .entry-content figcaption,
 .entry-content figure figcaption {
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .entry-content figcaption:empty,
