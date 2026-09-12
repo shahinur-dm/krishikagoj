@@ -12,6 +12,7 @@ import SearchPage from './pages/SearchPage'
 import VideosPage from './pages/VideosPage'
 import PhotosPage from './pages/PhotosPage'
 import LoginPage from './pages/admin/LoginPage'
+import VisitorLoginPage from './pages/VisitorLoginPage'
 import './styles/global.css'
 import './styles/admin.css'
 
@@ -70,7 +71,9 @@ export default function App() {
     <AuthProvider>
     <SiteDataProvider>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<VisitorLoginPage />} />
+          <Route path="/visitor/login" element={<VisitorLoginPage />} />
+          <Route path="/admin/login" element={<LoginPage />} />
           <Route
             path="/register"
             element={

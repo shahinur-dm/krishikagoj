@@ -7,11 +7,11 @@ import VideoGallery from '../models/VideoGallery.js'
 import Staff from '../models/Staff.js'
 import ImportantWebsite from '../models/ImportantWebsite.js'
 import User from '../models/User.js'
-import { requireAuth } from '../middleware/auth.js'
+import { requireAuth, requireStaff } from '../middleware/auth.js'
 
 const router = Router()
 
-router.get('/', requireAuth, async (_req, res) => {
+router.get('/', requireAuth, requireStaff, async (_req, res) => {
   try {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)

@@ -80,7 +80,7 @@ export default function RegisterPage() {
             </button>
           </form>
           <div className="login-footer">
-            <Link to="/login">লগইন পেজে ফিরুন</Link>
+            <Link to="/admin/login">লগইন পেজে ফিরুন</Link>
           </div>
         </div>
       </div>

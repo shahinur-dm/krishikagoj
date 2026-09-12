@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useSiteData } from '../context/SiteDataContext'
 import { useLang } from '../context/LanguageContext'
+import { useAuth } from '../context/AuthContext'
 import { BrandLogoLink } from './BrandLogo'
 import LangSwitch from './LangSwitch'
 
@@ -23,12 +24,15 @@ function CategoryLink({ cat, text, className, onClick, caret }) {
 export function SiteHeader() {
   const { categories, settings, subs } = useSiteData()
   const { t, text, isEn } = useLang()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const navRailRef = useRef(null)
   const moreRef = useRef(null)
+  const userMenuRef = useRef(null)
   const [megaOpen, setMegaOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [openAcc, setOpenAcc] = useState(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [q, setQ] = useState('')
@@ -77,6 +81,7 @@ export function SiteHeader() {
   useEffect(() => {
     setMegaOpen(false)
     setMoreOpen(false)
+    setUserMenuOpen(false)
     setOpenAcc(null)
   }, [location.pathname])
 
@@ -85,10 +90,12 @@ export function SiteHeader() {
       if (e.key !== 'Escape') return
       setMegaOpen(false)
       setMoreOpen(false)
+      setUserMenuOpen(false)
       setOpenAcc(null)
     }
     function onClick(e) {
       if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false)
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false)
       if (e.target.closest('.nav-mega') || e.target.closest('.kk-mega-panel')) return
       if (e.target.closest('.kk-drawer') || e.target.closest('.expend-navbar')) return
       setMegaOpen(false)
@@ -254,12 +261,54 @@ export function SiteHeader() {
                   {t.social}
                 </a>
               </div>
-              <div className="nav-item d-none d-md-block">
-                <Link to="/login" className="nav-link">
-                  <i className="fa-solid fa-user me-2" />
-                  {t.login}
-                </Link>
-              </div>
+              {user ? (
+                <div className="nav-item d-none d-md-block visitor-profile-nav" ref={userMenuRef}>
+                  <span
+                    className="nav-link d-inline-flex align-items-center"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setUserMenuOpen((v) => !v)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    {user.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        style={{ width: 20, height: 20, borderRadius: '50%', marginRight: 6, objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <i className="fa-solid fa-circle-user me-1" />
+                    )}
+                    <span className="visitor-name-label">{user.name?.split(' ')[0] || (isEn ? 'Account' : 'অ্যাকাউন্ট')}</span>
+                  </span>
+                  {userMenuOpen && (
+                    <div className="visitor-dropdown-menu">
+                      <div className="visitor-dropdown-header">
+                        <strong>{user.name}</strong>
+                        <small>{user.email}</small>
+                      </div>
+                      <button
+                        type="button"
+                        className="visitor-logout-btn"
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          logout()
+                        }}
+                      >
+                        <i className="fa-solid fa-arrow-right-from-bracket me-2" />
+                        {isEn ? 'Log Out' : 'লগআউট'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="nav-item d-none d-md-block">
+                  <Link to="/login" className="nav-link">
+                    <i className="fa-solid fa-user me-2" />
+                    {t.login}
+                  </Link>
+                </div>
+              )}
             </div>
 
             <div className="main-others">
@@ -504,9 +553,28 @@ export function SiteHeader() {
                   </div>
                 )
               })}
-              <Link to="/login" className="kk-drawer-link" onClick={closeMenus}>
-                {t.login}
-              </Link>
+              {user ? (
+                <div className="kk-drawer-link d-flex justify-content-between align-items-center">
+                  <span className="text-truncate me-2">
+                    <i className="fa-solid fa-circle-user me-2" />
+                    {user.name}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger py-0 px-2"
+                    onClick={() => {
+                      closeMenus()
+                      logout()
+                    }}
+                  >
+                    {isEn ? 'Log Out' : 'লগআউট'}
+                  </button>
+                </div>
+              ) : (
+                <Link to="/login" className="kk-drawer-link" onClick={closeMenus}>
+                  {t.login}
+                </Link>
+              )}
             </nav>
           </aside>
         </div>

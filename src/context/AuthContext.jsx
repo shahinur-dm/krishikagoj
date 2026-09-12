@@ -35,14 +35,30 @@ export function AuthProvider({ children }) {
     return data.user
   }, [])
 
+  const visitorLogin = useCallback(async (oauthData) => {
+    const data = await api.visitorOAuth(oauthData)
+    setToken(data.token)
+    setUser(data.user)
+    return data.user
+  }, [])
+
   const logout = useCallback(() => {
     setToken(null)
     setUser(null)
   }, [])
 
   const value = useMemo(
-    () => ({ user, loading, login, logout, isAuthenticated: !!user }),
-    [user, loading, login, logout],
+    () => ({
+      user,
+      loading,
+      login,
+      visitorLogin,
+      logout,
+      isAuthenticated: !!user,
+      isVisitor: user?.role === 'visitor',
+      isAdmin: user && user.role !== 'visitor',
+    }),
+    [user, loading, login, visitorLogin, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

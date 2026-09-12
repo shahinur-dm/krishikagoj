@@ -8553,4 +8553,229 @@ html.is-physical-mobile .kk-post-right {
   }
 }
 
+/* ===== VISITOR LOGIN (Reader Account) ===== */
+.visitor-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  padding: 2rem 1rem;
+}
+.visitor-login-box {
+  width: 100%;
+  max-width: 460px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+  border: 1px solid #e2e8f0;
+  padding: 2rem 2.2rem;
+  box-sizing: border-box;
+}
+.visitor-login-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+.visitor-back-link {
+  font-size: 0.88rem;
+  color: #64748b;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+.visitor-back-link:hover {
+  color: #0f172a;
+}
+.visitor-login-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+.visitor-login-logo {
+  max-width: 220px;
+  margin: 0 auto 1.25rem;
+}
+.visitor-login-logo img {
+  max-height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+.visitor-login-header h2 {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.5rem;
+}
+.visitor-login-subtitle {
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0;
+}
+.visitor-login-body {
+  margin-bottom: 1.5rem;
+}
+.visitor-login-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+.visitor-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0.78rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+.visitor-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.visitor-btn-google {
+  background: #ffffff;
+  color: #1f2937;
+  border-color: #d1d5db;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.visitor-btn-google:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.visitor-btn-facebook {
+  background: #1877f2;
+  color: #ffffff;
+  border-color: #1877f2;
+  box-shadow: 0 1px 3px rgba(24, 119, 242, 0.2);
+}
+.visitor-btn-facebook:hover:not(:disabled) {
+  background: #166fe5;
+  border-color: #166fe5;
+}
+.visitor-optional-notice {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  margin-top: 1.5rem;
+}
+.visitor-notice-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #15803d;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+.visitor-optional-notice p {
+  font-size: 0.82rem;
+  color: #166534;
+  margin: 0;
+  line-height: 1.45;
+}
+.visitor-logged-state {
+  text-align: center;
+  padding: 1rem 0;
+}
+.visitor-avatar-wrap {
+  margin-bottom: 0.75rem;
+}
+.visitor-avatar-img {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #3b82f6;
+}
+.visitor-login-footer {
+  text-align: center;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+.visitor-footer-home-link {
+  font-size: 0.85rem;
+  color: #64748b;
+  text-decoration: none;
+}
+.visitor-footer-home-link:hover {
+  color: #0f172a;
+}
+
+.visitor-profile-nav {
+  position: relative;
+}
+.visitor-name-label {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.visitor-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 0.75rem 0.5rem;
+  min-width: 180px;
+  z-index: 1050;
+  margin-top: 6px;
+}
+.visitor-dropdown-header {
+  padding: 0.4rem 0.75rem 0.6rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+}
+.visitor-dropdown-header strong {
+  font-size: 0.88rem;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.visitor-dropdown-header small {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.visitor-logout-btn {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #dc2626;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s ease;
+  margin-top: 0.35rem;
+}
+.visitor-logout-btn:hover {
+  background: #fef2f2;
+}
+
 

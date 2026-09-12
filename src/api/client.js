@@ -48,6 +48,8 @@ async function request(path, options = {}) {
 
 export const api = {
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+  visitorOAuth: (body) =>
+    request('/auth/visitor/oauth', { method: 'POST', body: JSON.stringify(body) }),
   register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
   me: () => request('/auth/me'),
   changePassword: (body) =>

@@ -29,17 +29,26 @@ export async function requireAuth(req, res, next) {
   }
 }
 
+export function requireStaff(req, res, next) {
+  if (!req.user || req.user.role === 'visitor') {
+    return res.status(403).json({ message: 'Admin or staff access required' })
+  }
+  next()
+}
+
 export function requireSuperAdmin(req, res, next) {
-  if (req.user?.role !== 'superadmin') {
+  if (!req.user || req.user.role !== 'superadmin') {
     return res.status(403).json({ message: 'Super admin access required' })
   }
   next()
 }
 
-/** Superadmin bypasses; writers need matching permissions flag */
+/** Superadmin bypasses; staff/writers need matching permissions flag; visitors are denied */
 export function requirePermission(...keys) {
   return (req, res, next) => {
-    if (!req.user) return res.status(401).json({ message: 'Login required' })
+    if (!req.user || req.user.role === 'visitor') {
+      return res.status(403).json({ message: 'Permission denied' })
+    }
     if (req.user.role === 'superadmin') return next()
     const perms = req.user.permissions || {}
     const ok = keys.some((k) => perms[k] === true)
@@ -53,13 +62,15 @@ export function isSuperAdmin(user) {
 }
 
 export function canSeeAllPosts(user) {
-  return isSuperAdmin(user) || user?.permissions?.allpost === true
+  return isSuperAdmin(user) || (user?.role !== 'visitor' && user?.permissions?.allpost === true)
 }
 
 /** Granular action check with fallback to existing module flags */
 export function requireAction(module, action, ...fallbackKeys) {
   return (req, res, next) => {
-    if (!req.user) return res.status(401).json({ message: 'Login required' })
+    if (!req.user || req.user.role === 'visitor') {
+      return res.status(403).json({ message: 'Permission denied' })
+    }
     if (req.user.role === 'superadmin') return next()
     if (hasAction(req.user, module, action)) return next()
     const perms = req.user.permissions || {}

@@ -54,6 +54,115 @@ router.post('/register', async (req, res) => {
   }
 })
 
+/** Visitor OAuth (Google / Facebook Reader Account) */
+router.post('/visitor/oauth', async (req, res) => {
+  try {
+    const { provider = 'google', token, email, name, avatar, providerId } = req.body
+    const prov = provider === 'facebook' ? 'facebook' : 'google'
+
+    let userEmail = String(email || '').toLowerCase().trim()
+    let userName = String(name || '').trim()
+    let userAvatar = String(avatar || '').trim()
+    let pId = String(providerId || '').trim()
+
+    // If a JWT id_token from Google is supplied, try to decode its payload safely
+    if (token && prov === 'google' && !userEmail) {
+      try {
+        const parts = token.split('.')
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'))
+          if (payload.email) userEmail = String(payload.email).toLowerCase().trim()
+          if (payload.name && !userName) userName = String(payload.name).trim()
+          if (payload.picture && !userAvatar) userAvatar = String(payload.picture).trim()
+          if (payload.sub && !pId) pId = String(payload.sub).trim()
+        }
+      } catch {
+        /* fallback to body values */
+      }
+    }
+
+    if (!pId && !userEmail) {
+      return res.status(400).json({ message: 'Valid email or provider identity required' })
+    }
+
+    if (!userEmail) {
+      userEmail = `${prov}_${pId || Date.now()}@krishikagoj.reader`
+    }
+    if (!userName) {
+      userName = prov === 'google' ? 'Google Reader' : 'Facebook Reader'
+    }
+
+    // Look for existing visitor account
+    const query = {
+      role: 'visitor',
+      $or: [{ email: userEmail }],
+    }
+    if (pId) {
+      if (prov === 'google') query.$or.push({ googleId: pId })
+      else query.$or.push({ facebookId: pId })
+    }
+
+    let visitor = await User.findOne(query)
+
+    if (visitor) {
+      let changed = false
+      if (userName && visitor.name !== userName) {
+        visitor.name = userName
+        changed = true
+      }
+      if (userAvatar && visitor.avatar !== userAvatar) {
+        visitor.avatar = userAvatar
+        changed = true
+      }
+      if (prov === 'google' && pId && visitor.googleId !== pId) {
+        visitor.googleId = pId
+        changed = true
+      }
+      if (prov === 'facebook' && pId && visitor.facebookId !== pId) {
+        visitor.facebookId = pId
+        changed = true
+      }
+      if (changed) {
+        await visitor.save()
+      }
+    } else {
+      // Create new visitor account (strictly non-admin)
+      visitor = await User.create({
+        name: userName,
+        email: userEmail,
+        avatar: userAvatar,
+        provider: prov,
+        googleId: prov === 'google' ? pId : '',
+        facebookId: prov === 'facebook' ? pId : '',
+        role: 'visitor',
+        isActive: true,
+        permissions: {
+          category: false,
+          district: false,
+          post: false,
+          allpost: false,
+          setting: false,
+          gallery: false,
+          ads: false,
+          role: false,
+          users: false,
+          breaking: false,
+          actions: {},
+        },
+      })
+    }
+
+    const jwtToken = signToken(visitor)
+    res.json({
+      token: jwtToken,
+      user: visitor.toSafeJSON(),
+      message: 'Visitor login successful',
+    })
+  } catch (err) {
+    res.status(500).json({ message: err.message || 'Visitor login failed' })
+  }
+})
+
 router.get('/me', requireAuth, (req, res) => {
   res.json(req.user.toSafeJSON())
 })

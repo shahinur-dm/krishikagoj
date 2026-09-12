@@ -23,8 +23,10 @@ const ROUTE_RULES = [
   { match: /^\/admin\/(website|livetv|namaz|notice|social|important-websites)/, perm: 'setting' },
 ]
 
+const ADMIN_ROLES = ['superadmin', 'admin', 'editor', 'news_editor', 'writer']
+
 function allowed(user, pathname) {
-  if (!user) return false
+  if (!user || user.role === 'visitor' || !ADMIN_ROLES.includes(user.role)) return false
   if (user.role === 'superadmin') return true
   if (pathname === '/admin' || pathname === '/admin/') return true
   const rule = ROUTE_RULES.find((r) => r.match.test(pathname))
@@ -50,8 +52,8 @@ export default function ProtectedRoute({ children }) {
     )
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+  if (!isAuthenticated || !user || user.role === 'visitor' || !ADMIN_ROLES.includes(user.role)) {
+    return <Navigate to="/admin/login" replace state={{ from: location }} />
   }
 
   if (!allowed(user, location.pathname)) {

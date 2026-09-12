@@ -187,7 +187,7 @@ export default function AdminLayout() {
 
   function handleLogout() {
     logout()
-    navigate('/login')
+    navigate('/admin/login')
   }
 
   return (
