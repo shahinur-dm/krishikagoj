@@ -24,7 +24,7 @@ import pagesRouter from './routes/pages.js'
 import aiSettingsRouter from './routes/aiSettings.js'
 import layoutTopicsRouter from './routes/layoutTopics.js'
 import translateRouter from './routes/translate.js'
-import { renderArticleOgHtml } from './utils/ssrOgMeta.js'
+import { renderArticleOgHtml, extractNewsSlug } from './utils/ssrOgMeta.js'
 
 const app = express()
 
@@ -32,33 +32,9 @@ app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
 app.use(async (req, res, next) => {
-  let newsSlug =
-    req.query?.__newsSlug ||
-    req.headers['x-news-slug'] ||
-    null
+  const targetSlug = extractNewsSlug(req)
 
-  if (!newsSlug && req.url && req.url.includes('__newsSlug=')) {
-    try {
-      const qIndex = req.url.indexOf('__newsSlug=')
-      if (qIndex !== -1) {
-        newsSlug = req.url.slice(qIndex + 11).split('&')[0]?.split('#')[0]
-      }
-    } catch {}
-  }
-
-  const urlToCheck = req.originalUrl || req.url || req.path || ''
-  const matchedPath = req.headers['x-matched-path'] || req.headers['x-vercel-matched-path'] || ''
-
-  let slugFromUrl = null
-  if (urlToCheck.includes('/news/')) {
-    slugFromUrl = urlToCheck.split('/news/')[1]?.split('?')[0]?.split('#')[0]
-  } else if (matchedPath.includes('/news/')) {
-    slugFromUrl = matchedPath.split('/news/')[1]?.split('?')[0]?.split('#')[0]
-  }
-
-  const targetSlug = newsSlug || slugFromUrl
-
-  if (req.method === 'GET' && targetSlug) {
+  if ((req.method === 'GET' || req.method === 'HEAD') && targetSlug) {
     try {
       await connectDb()
       return await renderArticleOgHtml(req, res, targetSlug)
@@ -71,6 +47,19 @@ app.use(async (req, res, next) => {
     req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`
   }
   next()
+})
+
+app.get('/api/og', async (req, res, next) => {
+  const raw = req.query?.slug || req.query?.__newsSlug
+  const slug = Array.isArray(raw) ? raw.filter(Boolean).join('/') : raw
+  if (!slug) return next()
+  try {
+    await connectDb()
+    return await renderArticleOgHtml(req, res, slug)
+  } catch (err) {
+    console.error('SSR OG /api/og error:', err)
+    return next()
+  }
 })
 
 app.get('/api/health', async (_req, res) => {
@@ -162,17 +151,24 @@ export async function connectDb() {
 
     globalCache.promise = mongoose
       .connect(uri, {
-        maxPoolSize: 5,
-        minPoolSize: 0,
+        maxPoolSize: 20,
+        minPoolSize: 1,
         serverSelectionTimeoutMS: 8000,
         socketTimeoutMS: 20000,
         bufferCommands: false,
         autoIndex: false,
       })
-      .then((conn) => {
+      .then(async (conn) => {
         console.log('MongoDB connected:', conn.connection.name)
         globalCache.conn = conn
         lastDbError = null
+        try {
+          const Article = (await import('./models/Article.js')).default
+          const Media = (await import('./models/Media.js')).default
+          await Promise.all([Article.syncIndexes(), Media.syncIndexes()])
+        } catch (err) {
+          console.warn('Index sync skipped:', err.message)
+        }
         return conn
       })
       .catch((err) => {

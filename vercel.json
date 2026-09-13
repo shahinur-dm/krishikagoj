@@ -3,10 +3,11 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/news/(.*)", "destination": "/api?__newsSlug=$1" },
+    { "source": "/news/:slug", "destination": "/api/og?slug=:slug" },
+    { "source": "/news/:slug*", "destination": "/api/og?slug=:slug*" },
+    { "source": "/api/:path*", "destination": "/api" },
     {
-      "source": "/((?!api/|assets/|.*\\..*).*)",
+      "source": "/((?!api/|news/|assets/|.*\\..*).*)",
       "destination": "/index.html"
     }
   ],
@@ -15,6 +16,12 @@
       "source": "/api/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/api/home",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=15, s-maxage=30, stale-while-revalidate=120" }
       ]
     },
     {
@@ -36,7 +43,7 @@
       ]
     },
     {
-      "source": "/((?!assets/|api/media/|.*\\.(?:png|jpg|jpeg|svg|webp|ico|woff2?|ttf|eot)).*)",
+      "source": "/((?!assets/|api/|.*\\.(?:png|jpg|jpeg|svg|webp|ico|woff2?|ttf|eot)).*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate, max-age=0, s-maxage=0" }
       ]

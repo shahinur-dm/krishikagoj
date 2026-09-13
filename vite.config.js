@@ -6,6 +6,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://127.0.0.1:5050',
+      '/news': 'http://127.0.0.1:5050',
+    },
+    warmup: {
+      clientFiles: [
+        './src/pages/HomePage.jsx',
+        './src/components/CategorySection.jsx',
+        './src/components/LeadSection.jsx',
+        './src/styles/global.css',
+      ],
     },
   },
 })

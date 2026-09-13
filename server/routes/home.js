@@ -8,20 +8,18 @@ import Subcategory from '../models/Subcategory.js'
 import ImportantWebsite from '../models/ImportantWebsite.js'
 import Staff from '../models/Staff.js'
 import Ad from '../models/Ad.js'
-import { ensureDemoAds, slimAd, isLive } from './ads.js'
+import { slimAd, isLive } from './ads.js'
 import { cacheGet, cacheSet } from '../utils/cache.js'
 import { isAdsGloballyEnabled } from '../utils/adsEnabled.js'
 import BreakingNews from '../models/BreakingNews.js'
 import Opinion from '../models/Opinion.js'
 import LayoutTopic from '../models/LayoutTopic.js'
-import { ensureDefaultLayoutTopics } from './layoutTopics.js'
+import { HOME_LIST_SELECT } from '../utils/articleFields.js'
 
 const router = Router()
-const CACHE_KEY = 'home:v43'
-const CACHE_TTL = 5_000
-
-const SLIM =
-  'title titleEn slug excerpt excerptEn body bodyEn image author views featured headline latest popular bigthumbnail publishedAt category subcategory'
+const CACHE_KEY = 'home:v45'
+const CACHE_TTL = 120_000
+const EXCERPT_LEN = 180
 
 function extractText(htmlOrText, maxLen = 800) {
   if (!htmlOrText) return ''
@@ -38,7 +36,7 @@ function extractText(htmlOrText, maxLen = 800) {
   return clean.slice(0, maxLen)
 }
 
-function getFullDescription(excerpt, body, maxLen = 700) {
+function getFullDescription(excerpt, body, maxLen = EXCERPT_LEN) {
   const cleanExcerpt = extractText(excerpt, maxLen)
   const cleanBody = extractText(body, maxLen)
   if (!cleanExcerpt && !cleanBody) return ''
@@ -73,8 +71,8 @@ function ytThumb(embed) {
 
 function slimArticle(a, imageW = 480) {
   if (!a) return a
-  const rawBn = getFullDescription(a.excerpt, a.body, 700)
-  const rawEn = getFullDescription(a.excerptEn, a.bodyEn, 700)
+  const rawBn = getFullDescription(a.excerpt, a.body, EXCERPT_LEN)
+  const rawEn = getFullDescription(a.excerptEn, a.bodyEn, EXCERPT_LEN)
   return {
     _id: a._id,
     title: a.title,
@@ -130,10 +128,11 @@ async function buildTopicGrid(settings) {
     isPublished: { $ne: false },
     $or: [{ subcategory: { $in: topics.map((topic) => topic._id) } }, { _id: { $in: pickedIds } }],
   })
-    .select(SLIM)
+    .select(HOME_LIST_SELECT)
     .populate('category', 'name nameEn slug')
     .populate('subcategory', 'nameBn nameEn slug')
     .sort({ publishedAt: -1 })
+    .limit(80)
     .lean()
 
   const byId = new Map(extra.map((article) => [String(article._id), slimArticle(article, 400)]))
@@ -236,25 +235,31 @@ function slimSettings(s) {
   }
 }
 
+function setHomeCacheHeaders(res, bust) {
+  if (bust) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    res.set('Pragma', 'no-cache')
+    res.set('Surrogate-Control', 'no-store')
+    return
+  }
+  res.set('Cache-Control', 'public, max-age=15, s-maxage=30, stale-while-revalidate=120')
+}
+
 router.get('/', async (req, res) => {
   try {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
-    res.set('Pragma', 'no-cache')
-    res.set('Expires', '0')
-    res.set('Surrogate-Control', 'no-store')
-
     const bust = Boolean(req.query.bust)
+    setHomeCacheHeaders(res, bust)
+
     const cached = bust ? null : cacheGet(CACHE_KEY)
     if (cached) {
       res.set('X-Cache', 'HIT')
       return res.json(cached)
     }
 
+    const started = Date.now()
     const [
       categories,
       articles,
-      popularFlagged,
-      popularByViews,
       photos,
       videos,
       settings,
@@ -263,26 +268,15 @@ router.get('/', async (req, res) => {
       breakingNews,
       opinions,
       layoutTopics,
+      ads,
     ] = await Promise.all([
       Category.find({ isActive: true }).select('name nameEn slug order').sort({ order: 1, name: 1 }).lean(),
       Article.find({ isPublished: true })
-        .select(SLIM)
+        .select(HOME_LIST_SELECT)
         .populate('category', 'name nameEn slug')
         .populate('subcategory', 'nameBn nameEn slug')
         .sort({ publishedAt: -1 })
-        .limit(160)
-        .lean(),
-      Article.find({ isPublished: true, popular: true })
-        .select(SLIM)
-        .populate('category', 'name nameEn slug')
-        .sort({ publishedAt: -1 })
-        .limit(20)
-        .lean(),
-      Article.find({ isPublished: true })
-        .select(SLIM)
-        .populate('category', 'name nameEn slug')
-        .sort({ views: -1 })
-        .limit(20)
+        .limit(80)
         .lean(),
       PhotoGallery.find().select('title photo type').sort({ createdAt: -1 }).limit(12).lean(),
       VideoGallery.find()
@@ -320,25 +314,24 @@ router.get('/', async (req, res) => {
         .populate('subcategory', 'nameBn nameEn slug')
         .sort({ order: 1, createdAt: 1 })
         .lean(),
-    ])
-
-    let ads = []
-    try {
-      ads = await Ad.find({ isActive: { $ne: false } })
+      Ad.find({ isActive: { $ne: false } })
         .sort({ position: 1, order: 1, createdAt: -1 })
         .lean()
-    } catch (err) {
-      console.warn('ads query failed:', err.message)
-    }
+        .catch((err) => {
+          console.warn('ads query failed:', err.message)
+          return []
+        }),
+    ])
 
     const slimArts = articles.map((a, i) => slimArticle(a, i === 0 ? 800 : 400))
-    const popularSource = popularFlagged.length ? popularFlagged : popularByViews
-    const popular = popularSource.map((a) => slimArticle(a, 400))
+    const popular = [...slimArts]
+      .sort((a, b) => (b.views || 0) - (a.views || 0) || (b.popular ? 1 : 0) - (a.popular ? 1 : 0))
+      .slice(0, 12)
     const contentCats = categories.filter((c) => c.slug && c.slug !== 'home')
 
-    const headlines = slimArts.filter((a) => a.headline).slice(0, 16)
-    const featured = slimArts.filter((a) => a.featured).slice(0, 16)
-    const latest = slimArts.filter((a) => a.latest).slice(0, 30)
+    const headlines = slimArts.filter((a) => a.headline).slice(0, 12)
+    const featured = slimArts.filter((a) => a.featured).slice(0, 12)
+    const latest = slimArts.filter((a) => a.latest).slice(0, 20)
     const bigThumb = slimArts.find((a) => a.bigthumbnail)
 
     const gridSlug = settings?.topicGridSlug || 'motso'
@@ -346,7 +339,7 @@ router.get('/', async (req, res) => {
     for (const cat of contentCats) byCategory[cat.slug] = []
     for (const article of slimArts) {
       const slug = article.category?.slug
-      const cap = slug === gridSlug ? 32 : 9
+      const cap = slug === gridSlug ? 16 : 9
       if (!slug || !byCategory[slug] || byCategory[slug].length >= cap) continue
       byCategory[slug].push(article)
     }
@@ -365,7 +358,7 @@ router.get('/', async (req, res) => {
     const need = [...new Set(extraIds)].filter((id) => !known.has(id))
     if (need.length) {
       const extra = await Article.find({ _id: { $in: need }, isPublished: true })
-        .select(SLIM)
+        .select(HOME_LIST_SELECT)
         .populate('category', 'name nameEn slug')
         .lean()
       extra.forEach((a) => known.set(String(a._id), slimArticle(a, 400)))
@@ -388,7 +381,7 @@ router.get('/', async (req, res) => {
         const id = String(item._id)
         if (!used.has(id)) next.push(item)
       })
-      byCategory[slug] = next.slice(0, slug === gridSlug ? 32 : 12)
+      byCategory[slug] = next.slice(0, slug === gridSlug ? 16 : 12)
     }
 
     const safolloCat = contentCats.find((c) => c.slug === 'safollo')
@@ -397,7 +390,7 @@ router.get('/', async (req, res) => {
         isPublished: true,
         category: safolloCat._id,
       })
-        .select(SLIM)
+        .select(HOME_LIST_SELECT)
         .populate('category', 'name nameEn slug')
         .sort({ publishedAt: -1 })
         .limit(7)
@@ -443,7 +436,7 @@ router.get('/', async (req, res) => {
     const missing = [...new Set(wantedIds)].filter((id) => !byId.has(id))
     if (missing.length) {
       const extra = await Article.find({ _id: { $in: missing }, isPublished: true })
-        .select(SLIM)
+        .select(HOME_LIST_SELECT)
         .populate('category', 'name nameEn slug')
         .lean()
       extra.forEach((a) => byId.set(String(a._id), slimArticle(a, 400)))
@@ -467,11 +460,10 @@ router.get('/', async (req, res) => {
 
     const payload = {
       categories,
-      headlines: headlines.length ? headlines : slimArts.slice(0, 16),
-      featured: featuredOut.length ? featuredOut : slimArts.slice(0, 16),
-      latest: latest.length >= 12 ? latest : slimArts.slice(0, 40),
-      popular: popular.length ? popular : slimArts.slice(0, 16),
-      recent: slimArts.slice(0, 40),
+      headlines: headlines.length ? headlines : slimArts.slice(0, 12),
+      featured: featuredOut.length ? featuredOut : slimArts.slice(0, 12),
+      latest: latest.length >= 12 ? latest : slimArts.slice(0, 20),
+      popular: popular.length ? popular : slimArts.slice(0, 12),
       leadLayout,
       byCategory,
       topicGrid,
@@ -498,7 +490,7 @@ router.get('/', async (req, res) => {
         name: o.name,
         title: o.title,
         titleEn: o.titleEn || '',
-        details: o.details || '',
+        details: extractText(o.details || '', EXCERPT_LEN),
         image: o.image || '',
         createdAt: o.createdAt,
       })),
@@ -517,9 +509,9 @@ router.get('/', async (req, res) => {
       })),
     }
 
-    if (!bust) cacheSet(CACHE_KEY, payload, CACHE_TTL)
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
-    res.set('X-Cache', bust ? 'BYPASS' : (cached ? 'HIT' : 'MISS'))
+    cacheSet(CACHE_KEY, payload, CACHE_TTL)
+    res.set('X-Cache', bust ? 'BYPASS' : 'MISS')
+    res.set('X-Home-Build-Ms', String(Date.now() - started))
     res.json(payload)
   } catch (err) {
     res.status(500).json({ message: err.message })

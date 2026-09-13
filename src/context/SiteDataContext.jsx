@@ -119,16 +119,18 @@ export function SiteDataProvider({ children }) {
   useEffect(() => {
     let alive = true
     let lastFetchTime = 0
+    let hasData = false
     clearAllLegacyHomeCaches()
 
     async function loadHome(forceBust = false) {
       const now = Date.now()
-      if (!forceBust && now - lastFetchTime < 3000) return
+      if (!forceBust && now - lastFetchTime < 8000) return
       lastFetchTime = now
       try {
-        if (!data) setLoading(true)
-        const home = await api.getHome({ bust: Date.now() })
+        if (!hasData) setLoading(true)
+        const home = await api.getHome(forceBust ? { bust: Date.now() } : {})
         if (!alive) return
+        hasData = true
         setData(normalize(home))
         setError('')
 
@@ -141,7 +143,7 @@ export function SiteDataProvider({ children }) {
           desc.setAttribute('content', seo.metaDescription)
         }
       } catch (err) {
-        if (alive && !data) setError(err.message)
+        if (alive && !hasData) setError(err.message)
       } finally {
         if (alive) setLoading(false)
       }
@@ -156,8 +158,8 @@ export function SiteDataProvider({ children }) {
       }
     }
 
-    // 1. Initial immediate fresh fetch
-    loadHome(true)
+    // 1. Initial fetch — use CDN/memory cache, do not bust
+    loadHome(false)
     const t = setTimeout(loadSubs, 50)
 
     // 2. Global refresh function (for Admin and manual triggers)
@@ -206,7 +208,7 @@ export function SiteDataProvider({ children }) {
       if (document.visibilityState === 'visible') {
         loadHome(false)
       }
-    }, 30000)
+    }, 120000)
 
     return () => {
       alive = false
