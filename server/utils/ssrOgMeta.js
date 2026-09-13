@@ -45,6 +45,98 @@ export function getCleanArticleSlug(article) {
   return isCleanAscii ? rawSlug : id
 }
 
+function decodeSlug(raw) {
+  let s = String(raw || '').trim()
+  if (!s) return ''
+  try {
+    s = decodeURIComponent(s)
+  } catch {}
+  return s.replace(/\/+$/, '').split('?')[0].split('#')[0]
+}
+
+export function extractNewsSlug(req) {
+  const candidates = []
+  const q = req.query || {}
+  if (q.__newsSlug) candidates.push(q.__newsSlug)
+  if (q.slug) candidates.push(Array.isArray(q.slug) ? q.slug.join('/') : q.slug)
+
+  const headerSlug = req.headers['x-news-slug']
+  if (headerSlug) candidates.push(headerSlug)
+
+  const urls = [
+    req.originalUrl,
+    req.url,
+    req.path,
+    req.headers['x-matched-path'],
+    req.headers['x-vercel-matched-path'],
+    req.headers['x-invoke-path'],
+    req.headers['x-forwarded-uri'],
+  ].filter(Boolean).map(String)
+
+  for (const u of urls) {
+    if (u.includes('__newsSlug=')) {
+      candidates.push(u.slice(u.indexOf('__newsSlug=') + 11).split('&')[0])
+    }
+    const newsMatch = u.match(/\/news\/([^/?#]+)/)
+    if (newsMatch) candidates.push(newsMatch[1])
+  }
+
+  for (const raw of candidates) {
+    const s = decodeSlug(raw)
+    if (s && s !== 'api' && s !== 'index' && s !== '$1') return s
+  }
+  return null
+}
+
+async function resolveOgImage(article, siteUrl) {
+  const raw =
+    (article?.image && String(article.image).trim()) ||
+    (Array.isArray(article?.images) && article.images[0] ? String(article.images[0]).trim() : '') ||
+    ''
+
+  let imgUrl = raw
+  if (!imgUrl || /\.svg(\?|$)/i.test(imgUrl)) {
+    imgUrl = `${siteUrl}/logo.png`
+  } else if (!imgUrl.startsWith('http')) {
+    imgUrl = `${siteUrl}${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`
+  }
+
+  imgUrl = imgUrl.replace('https://krishikagoj-two.vercel.app', 'https://krishikagoj.com')
+
+  if (imgUrl.includes('images.unsplash.com')) {
+    const base = imgUrl.split('?')[0]
+    imgUrl = `${base}?auto=format&fit=crop&w=1200&h=630&q=80`
+  }
+
+  let imageType = 'image/jpeg'
+  const mediaMatch = imgUrl.match(/\/api\/media\/([0-9a-fA-F]{24})(?:\.(jpe?g|png|webp|gif))?$/i)
+  if (mediaMatch) {
+    const mediaId = mediaMatch[1]
+    let ext = 'jpg'
+    try {
+      const Media = (await import('../models/Media.js')).default
+      const m = await Media.findById(mediaId).select('mimeType').lean()
+      if (m?.mimeType === 'image/png') {
+        ext = 'png'
+        imageType = 'image/png'
+      } else if (m?.mimeType === 'image/webp') {
+        ext = 'webp'
+        imageType = 'image/webp'
+      } else if (m?.mimeType === 'image/gif') {
+        ext = 'gif'
+        imageType = 'image/gif'
+      } else {
+        imageType = m?.mimeType || 'image/jpeg'
+      }
+    } catch {}
+    imgUrl = `${siteUrl}/api/media/${mediaId}.${ext}`
+  } else if (/\.png(\?|$)/i.test(imgUrl)) imageType = 'image/png'
+  else if (/\.webp(\?|$)/i.test(imgUrl)) imageType = 'image/webp'
+  else if (/\.gif(\?|$)/i.test(imgUrl)) imageType = 'image/gif'
+
+  return { imgUrl, imageType }
+}
+
 function getProductionSiteUrl(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || ''
   if (host.includes('localhost') || host.includes('127.0.0.1')) {
@@ -149,20 +241,7 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
     const cleanSlug = getCleanArticleSlug(article)
     const canonicalUrl = `${siteUrl}/news/${cleanSlug}`
 
-    const rawImg = article.image || '/logo.png'
-    let imgUrl = rawImg
-    if (!imgUrl.startsWith('http')) {
-      imgUrl = `${siteUrl}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`
-    }
-    if (imgUrl.includes('krishikagoj-two.vercel.app')) {
-      imgUrl = imgUrl.replace('https://krishikagoj-two.vercel.app', 'https://krishikagoj.com')
-    }
-
-    let imageType = 'image/jpeg'
-    if (imgUrl.endsWith('.png')) imageType = 'image/png'
-    else if (imgUrl.endsWith('.webp')) imageType = 'image/webp'
-    else if (imgUrl.endsWith('.gif')) imageType = 'image/gif'
-    else if (imgUrl.endsWith('.svg')) imageType = 'image/svg+xml'
+    const { imgUrl, imageType } = await resolveOgImage(article, siteUrl)
 
     let html = baseHtml
 
@@ -208,8 +287,8 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
       `<meta property="og:image" content="${escapeAttr(imgUrl)}" />`,
       `<meta property="og:image:secure_url" content="${escapeAttr(imgUrl)}" />`,
       `<meta property="og:image:type" content="${imageType}" />`,
-      `<meta property="og:image:width" content="1200" />`,
-      `<meta property="og:image:height" content="630" />`,
+      imgUrl.includes('images.unsplash.com') ? `<meta property="og:image:width" content="1200" />` : '',
+      imgUrl.includes('images.unsplash.com') ? `<meta property="og:image:height" content="630" />` : '',
       `<meta property="og:image:alt" content="${escapeAttr(activeTitle)}" />`,
       `<meta property="og:locale" content="${isEn ? 'en_US' : 'bn_BD'}" />`,
       `<link rel="image_src" href="${escapeAttr(imgUrl)}" />`,
