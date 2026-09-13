@@ -1,4 +1,5 @@
 import app, { connectDb } from '../server/app.js'
+import { extractNewsSlug, renderArticleOgHtml } from '../server/utils/ssrOgMeta.js'
 
 function incomingPath(req) {
   const headers = req.headers || {}
@@ -40,10 +41,13 @@ async function handler(req, res) {
   }
 
   const incoming = incomingPath(req)
-  const newsSlug = newsSlugFromPath(incoming)
-  if (newsSlug && req.method === 'GET' && !String(req.url || '').includes('/api/home/')) {
-    req.url = `/api/articles/og/${encodeURIComponent(newsSlug)}`
-  } else if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/news')) {
+  const newsSlug = newsSlugFromPath(incoming) || extractNewsSlug(req)
+  if ((req.method === 'GET' || req.method === 'HEAD') && newsSlug && !String(req.url || '').includes('/api/home/')) {
+    return renderArticleOgHtml(req, res, newsSlug)
+  }
+
+  // Ensure req.url starts with /api so Express routes always match under Vercel serverless functions
+  if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/news')) {
     req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`
   }
 

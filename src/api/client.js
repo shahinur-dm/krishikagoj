@@ -11,24 +11,35 @@ export function setToken(token) {
 }
 
 async function request(path, options = {}) {
+  const {
+    cache: cacheMode = 'no-store',
+    skipAuth = false,
+    headers: extraHeaders,
+    credentials = 'same-origin',
+    ...fetchOpts
+  } = options
   const headers = {
     'Content-Type': 'application/json',
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0',
-    ...(options.headers || {}),
+    ...(cacheMode === 'no-store'
+      ? {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        }
+      : {}),
+    ...(extraHeaders || {}),
   }
-  const token = getToken()
+  const token = skipAuth ? null : getToken()
   if (token) headers.Authorization = `Bearer ${token}`
 
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 15000)
   try {
     const res = await fetch(`${API_URL}${path}`, {
-      cache: 'no-store',
-      ...options,
+      ...fetchOpts,
+      cache: cacheMode,
       headers,
-      credentials: 'same-origin',
+      credentials,
       signal: ctrl.signal,
     })
     const data = await res.json().catch(() => ({}))
@@ -63,12 +74,17 @@ export const api = {
   getDashboard: () => request('/dashboard'),
 
   getHome: (params = {}) => {
+    const bust = params.bust
     const qs = new URLSearchParams(
       Object.entries(params)
         .filter(([, v]) => v !== undefined && v !== null && v !== '')
         .map(([k, v]) => [k, String(v)]),
     ).toString()
-    return request(`/home${qs ? `?${qs}` : ''}`)
+    return request(`/home${qs ? `?${qs}` : ''}`, {
+      cache: bust ? 'no-store' : 'default',
+      skipAuth: true,
+      credentials: 'omit',
+    })
   },
   getHomeNews: (params = {}) => {
     const qs = new URLSearchParams(

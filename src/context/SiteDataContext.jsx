@@ -180,7 +180,7 @@ export function SiteDataProvider({ children }) {
 
     async function loadHome(forceBust = false) {
       const now = Date.now()
-      if (!forceBust && now - lastFetchTime < 3000) return
+      if (!forceBust && now - lastFetchTime < 8000) return
       lastFetchTime = now
       try {
         if (!data) setLoading(true)

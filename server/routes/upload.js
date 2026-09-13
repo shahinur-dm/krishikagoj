@@ -152,18 +152,53 @@ router.post(
   },
 )
 
+const mediaMem = new Map()
+const MEDIA_MEM_MAX = 50
+
+function rememberMedia(id, mimeType, buffer) {
+  if (!buffer || buffer.length > 800_000) return
+  if (mediaMem.size >= MEDIA_MEM_MAX) {
+    const first = mediaMem.keys().next().value
+    mediaMem.delete(first)
+  }
+  mediaMem.set(id, { mimeType, buffer })
+}
+
 router.get('/:id', async (req, res) => {
   try {
-    if (!/^[0-9a-fA-F]{24}$/.test(req.params.id)) {
+    if (!/^[0-9a-fA-F]{24}$/.test(req.params.id.replace(/\.(jpe?g|png|webp|gif)$/i, ''))) {
       return res.status(404).json({ message: 'Not found' })
     }
-    const doc = await Media.findById(req.params.id).select('mimeType data secureUrl updatedAt').lean()
-    if (doc?.secureUrl) {
-      return res.redirect(302, doc.secureUrl)
+    const id = String(req.params.id || '').replace(/\.(jpe?g|png|webp|gif)$/i, '')
+    const cached = mediaMem.get(id)
+    if (cached) {
+      res.set({
+        'Content-Type': cached.mimeType || 'application/octet-stream',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Content-Length': cached.buffer.length,
+      })
+      return res.send(cached.buffer)
     }
-    if (!doc?.data) return res.status(404).json({ message: 'Not found' })
+
+    const ua = String(req.headers['user-agent'] || '')
+    const isShareBot = /facebookexternalhit|Facebot|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest/i.test(ua)
+
+    const meta = await Media.findById(id).select('mimeType secureUrl url updatedAt').lean()
+    // Share crawlers often skip og:image redirects; stream bytes when we have them.
+    if (!isShareBot) {
+      if (meta?.secureUrl) return res.redirect(302, meta.secureUrl)
+      if (meta?.url && /^https?:\/\//i.test(meta.url)) return res.redirect(302, meta.url)
+    }
+
+    const doc = await Media.findById(id).select('mimeType data updatedAt').lean()
+    if (!doc?.data) {
+      if (meta?.secureUrl) return res.redirect(302, meta.secureUrl)
+      if (meta?.url && /^https?:\/\//i.test(meta.url)) return res.redirect(302, meta.url)
+      return res.status(404).json({ message: 'Not found' })
+    }
 
     const buffer = doc.data.buffer || doc.data
+    rememberMedia(id, doc.mimeType, buffer)
     res.set({
       'Content-Type': doc.mimeType || 'application/octet-stream',
       'Cache-Control': 'public, max-age=31536000, immutable',

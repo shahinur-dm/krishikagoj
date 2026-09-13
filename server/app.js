@@ -24,7 +24,7 @@ import pagesRouter from './routes/pages.js'
 import aiSettingsRouter from './routes/aiSettings.js'
 import layoutTopicsRouter from './routes/layoutTopics.js'
 import translateRouter from './routes/translate.js'
-import { renderArticleOgHtml } from './utils/ssrOgMeta.js'
+import { renderArticleOgHtml, extractNewsSlug } from './utils/ssrOgMeta.js'
 
 const app = express()
 
@@ -44,9 +44,9 @@ function extractNewsSsrSlug(req) {
 }
 
 app.use(async (req, res, next) => {
-  const targetSlug = extractNewsSsrSlug(req)
+  const targetSlug = extractNewsSsrSlug(req) || extractNewsSlug(req)
 
-  if (req.method === 'GET' && targetSlug && !String(req.url || '').includes('/api/home/')) {
+  if ((req.method === 'GET' || req.method === 'HEAD') && targetSlug && !String(req.url || '').includes('/api/home/')) {
     try {
       await connectDb()
       return await renderArticleOgHtml(req, res, targetSlug)
@@ -59,6 +59,19 @@ app.use(async (req, res, next) => {
     req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`
   }
   next()
+})
+
+app.get('/api/og', async (req, res, next) => {
+  const raw = req.query?.slug || req.query?.__newsSlug
+  const slug = Array.isArray(raw) ? raw.filter(Boolean).join('/') : raw
+  if (!slug) return next()
+  try {
+    await connectDb()
+    return await renderArticleOgHtml(req, res, slug)
+  } catch (err) {
+    console.error('SSR OG /api/og error:', err)
+    return next()
+  }
 })
 
 app.get('/api/health', async (_req, res) => {
@@ -150,17 +163,24 @@ export async function connectDb() {
 
     globalCache.promise = mongoose
       .connect(uri, {
-        maxPoolSize: 5,
-        minPoolSize: 0,
+        maxPoolSize: 20,
+        minPoolSize: 1,
         serverSelectionTimeoutMS: 8000,
         socketTimeoutMS: 20000,
         bufferCommands: false,
         autoIndex: false,
       })
-      .then((conn) => {
+      .then(async (conn) => {
         console.log('MongoDB connected:', conn.connection.name)
         globalCache.conn = conn
         lastDbError = null
+        try {
+          const Article = (await import('./models/Article.js')).default
+          const Media = (await import('./models/Media.js')).default
+          await Promise.all([Article.syncIndexes(), Media.syncIndexes()])
+        } catch (err) {
+          console.warn('Index sync skipped:', err.message)
+        }
         return conn
       })
       .catch((err) => {

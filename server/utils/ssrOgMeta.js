@@ -109,6 +109,49 @@ async function resolveShareImage(rawImage, siteUrl) {
   return { imgUrl, imageType: guessImageType(imgUrl) }
 }
 
+function decodeSlug(raw) {
+  let s = String(raw || '').trim()
+  if (!s) return ''
+  try {
+    s = decodeURIComponent(s)
+  } catch {}
+  return s.replace(/\/+$/, '').split('?')[0].split('#')[0]
+}
+
+export function extractNewsSlug(req) {
+  const candidates = []
+  const q = req.query || {}
+  if (q.__newsSlug) candidates.push(q.__newsSlug)
+  if (q.slug) candidates.push(Array.isArray(q.slug) ? q.slug.join('/') : q.slug)
+
+  const headerSlug = req.headers['x-news-slug']
+  if (headerSlug) candidates.push(headerSlug)
+
+  const urls = [
+    req.originalUrl,
+    req.url,
+    req.path,
+    req.headers['x-matched-path'],
+    req.headers['x-vercel-matched-path'],
+    req.headers['x-invoke-path'],
+    req.headers['x-forwarded-uri'],
+  ].filter(Boolean).map(String)
+
+  for (const u of urls) {
+    if (u.includes('__newsSlug=')) {
+      candidates.push(u.slice(u.indexOf('__newsSlug=') + 11).split('&')[0])
+    }
+    const newsMatch = u.match(/\/(?:ssr-news|news)\/([^/?#]+)/)
+    if (newsMatch) candidates.push(newsMatch[1])
+  }
+
+  for (const raw of candidates) {
+    const s = decodeSlug(raw)
+    if (s && s !== 'api' && s !== 'index' && s !== '$1') return s
+  }
+  return null
+}
+
 function getProductionSiteUrl(req) {
   const host = req.headers['x-forwarded-host'] || req.headers.host || ''
   if (host.includes('localhost') || host.includes('127.0.0.1')) {
@@ -287,8 +330,8 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
       `<meta property="og:image" content="${escapeAttr(imgUrl)}" />`,
       `<meta property="og:image:secure_url" content="${escapeAttr(imgUrl)}" />`,
       `<meta property="og:image:type" content="${imageType}" />`,
-      `<meta property="og:image:width" content="1200" />`,
-      `<meta property="og:image:height" content="630" />`,
+      imgUrl.includes('images.unsplash.com') ? `<meta property="og:image:width" content="1200" />` : '',
+      imgUrl.includes('images.unsplash.com') ? `<meta property="og:image:height" content="630" />` : '',
       `<meta property="og:image:alt" content="${escapeAttr(activeTitle)}" />`,
       `<meta property="og:locale" content="${isEn ? 'en_US' : 'bn_BD'}" />`,
       `<link rel="image_src" href="${escapeAttr(imgUrl)}" />`,
