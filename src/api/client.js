@@ -70,6 +70,14 @@ export const api = {
     ).toString()
     return request(`/home${qs ? `?${qs}` : ''}`)
   },
+  getHomeNews: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => [k, String(v)]),
+    ).toString()
+    return request(`/home/news${qs ? `?${qs}` : ''}`)
+  },
 
   getCategories: () => request('/categories'),
   getAllCategories: () => request('/categories/all'),

@@ -24,9 +24,14 @@ function clearAllLegacyHomeCaches() {
 }
 
 let siteRefreshFn = null
+let siteLoadMoreNews = null
 
 export function refreshSiteData() {
   return siteRefreshFn ? siteRefreshFn() : Promise.resolve()
+}
+
+export function loadMoreSiteNews() {
+  return siteLoadMoreNews ? siteLoadMoreNews() : Promise.resolve()
 }
 
 function mapSlot(a) {
@@ -74,6 +79,53 @@ function normalize(data) {
     breakingNews: data.breakingNews || [],
     opinions: data.opinions || [],
     layoutTopics: data.layoutTopics || [],
+    hasMoreNews: data.hasMoreNews !== false,
+  }
+}
+
+function articleKey(item) {
+  return String(item?.id || item?._id || item?.slug || '')
+}
+
+function uniqueAppend(existing = [], incoming = []) {
+  const seen = new Set(existing.map(articleKey).filter(Boolean))
+  const extra = []
+  incoming.forEach((item) => {
+    const key = articleKey(item)
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    extra.push(item)
+  })
+  return existing.concat(extra)
+}
+
+function mergeMoreNews(prev, incoming) {
+  if (!prev) return prev
+  const mapped = (incoming || []).map(mapArticle).filter(Boolean)
+  const byCategory = { ...(prev.byCategory || {}) }
+  mapped.forEach((item) => {
+    const slug = item.category || item.raw?.category?.slug
+    if (!slug) return
+    const list = byCategory[slug] || []
+    byCategory[slug] = uniqueAppend(list, [item])
+  })
+  const categories = prev.contentCategories || prev.categories || []
+  return {
+    ...prev,
+    latest: uniqueAppend(prev.latest, mapped),
+    recent: uniqueAppend(prev.recent, mapped),
+    headlines: uniqueAppend(prev.headlines, mapped.filter((a) => a.headline)),
+    featured: uniqueAppend(prev.featured, mapped.filter((a) => a.featured)),
+    byCategory,
+    categoryBlocks: categories
+      .filter((c) => c.slug && c.slug !== 'home')
+      .map((cat) => ({
+        cat,
+        articles: uniqueAppend(
+          prev.categoryBlocks?.find((b) => b.cat?.slug === cat.slug)?.articles || [],
+          mapped.filter((a) => a.category === cat.slug),
+        ),
+      })),
   }
 }
 
@@ -98,6 +150,7 @@ const empty = {
   categoryBlocks: [],
   topicGrid: [],
   breakingNews: [],
+  hasMoreNews: true,
 }
 
 const SYNC_CHANNEL_NAME = 'kk_news_sync_channel'
@@ -115,10 +168,14 @@ export function SiteDataProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [subs, setSubs] = useState([])
+  const [loadingMoreNews, setLoadingMoreNews] = useState(false)
 
   useEffect(() => {
     let alive = true
     let lastFetchTime = 0
+    const newsLock = { current: false }
+    const newsSkip = { current: 0 }
+    const newsDone = { current: false }
     clearAllLegacyHomeCaches()
 
     async function loadHome(forceBust = false) {
@@ -127,9 +184,31 @@ export function SiteDataProvider({ children }) {
       lastFetchTime = now
       try {
         if (!data) setLoading(true)
-        const home = await api.getHome({ bust: Date.now() })
+        const home = await api.getHome(forceBust ? { bust: Date.now() } : {})
         if (!alive) return
-        setData(normalize(home))
+        const next = normalize(home)
+        newsSkip.current = (next.recent || []).length
+        newsDone.current = next.hasMoreNews === false
+        setData((prev) => {
+          if (!forceBust && prev?.recent?.length > (next.recent || []).length) {
+            return {
+              ...next,
+              latest: uniqueAppend(next.latest, prev.latest),
+              recent: uniqueAppend(next.recent, prev.recent),
+              headlines: uniqueAppend(next.headlines, prev.headlines),
+              featured: uniqueAppend(next.featured, prev.featured),
+              categoryBlocks: (next.categoryBlocks || []).map((block) => ({
+                ...block,
+                articles: uniqueAppend(
+                  block.articles,
+                  prev.categoryBlocks?.find((b) => b.cat?.slug === block.cat?.slug)?.articles || [],
+                ),
+              })),
+              hasMoreNews: prev.hasMoreNews && next.hasMoreNews !== false,
+            }
+          }
+          return next
+        })
         setError('')
 
         const seo = home?.settings?.seo
@@ -147,6 +226,31 @@ export function SiteDataProvider({ children }) {
       }
     }
 
+    async function loadMoreNews() {
+      if (!alive || newsLock.current || newsDone.current) return
+      newsLock.current = true
+      setLoadingMoreNews(true)
+      try {
+        const res = await api.getHomeNews({ skip: newsSkip.current, limit: 20 })
+        if (!alive) return
+        const items = res?.items || []
+        newsSkip.current += items.length
+        if (!items.length || res.hasMore === false || items.length < 20) {
+          newsDone.current = true
+        }
+        setData((prev) => {
+          const merged = mergeMoreNews(prev || empty, items)
+          return { ...merged, hasMoreNews: !newsDone.current }
+        })
+      } catch {
+        /* keep already loaded news */
+      } finally {
+        newsLock.current = false
+        if (alive) setLoadingMoreNews(false)
+      }
+    }
+    siteLoadMoreNews = loadMoreNews
+
     async function loadSubs() {
       try {
         const subcategories = await api.getSubcategories()
@@ -156,13 +260,14 @@ export function SiteDataProvider({ children }) {
       }
     }
 
-    // 1. Initial immediate fresh fetch
-    loadHome(true)
-    const t = setTimeout(loadSubs, 50)
+    loadHome(false)
+    loadSubs()
 
     // 2. Global refresh function (for Admin and manual triggers)
     siteRefreshFn = async () => {
       clearAllLegacyHomeCaches()
+      newsSkip.current = 0
+      newsDone.current = false
       await loadHome(true)
       await loadSubs()
       try {
@@ -192,31 +297,27 @@ export function SiteDataProvider({ children }) {
     }
     window.addEventListener('storage', handleStorageEvent)
 
-    // 5. Visibility / Window Focus revalidation (e.g. user returns to browser/mobile)
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
         loadHome(false)
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('focus', handleVisibilityChange)
 
-    // 6. Periodic background sync every 30 seconds
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         loadHome(false)
       }
-    }, 30000)
+    }, 120000)
 
     return () => {
       alive = false
-      clearTimeout(t)
       clearInterval(interval)
       if (syncChannel) syncChannel.removeEventListener('message', handleSyncMessage)
       window.removeEventListener('storage', handleStorageEvent)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('focus', handleVisibilityChange)
       if (siteRefreshFn) siteRefreshFn = null
+      siteLoadMoreNews = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -229,8 +330,10 @@ export function SiteDataProvider({ children }) {
       error,
       ready: Boolean(data),
       refresh: refreshSiteData,
+      loadingMoreNews,
+      loadMoreNews: loadMoreSiteNews,
     }),
-    [data, subs, loading, error],
+    [data, subs, loading, error, loadingMoreNews],
   )
 
   return <SiteDataContext.Provider value={value}>{children}</SiteDataContext.Provider>

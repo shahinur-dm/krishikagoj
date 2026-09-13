@@ -1,5 +1,29 @@
 import app, { connectDb } from '../server/app.js'
 
+function incomingPath(req) {
+  const headers = req.headers || {}
+  return String(
+    headers['x-invoke-path'] ||
+      headers['x-vercel-original-url'] ||
+      headers['x-matched-path'] ||
+      headers['x-vercel-matched-path'] ||
+      req.originalUrl ||
+      req.url ||
+      '',
+  )
+}
+
+function newsSlugFromPath(raw) {
+  const text = String(raw || '')
+  const ssr = text.match(/\/(?:articles\/og|ssr-news|news)\/([^?#]+)/)
+  if (!ssr) return ''
+  try {
+    return decodeURIComponent(ssr[1].split('/')[0] || '')
+  } catch {
+    return ssr[1].split('/')[0] || ''
+  }
+}
+
 async function handler(req, res) {
   try {
     await connectDb()
@@ -15,8 +39,11 @@ async function handler(req, res) {
     return
   }
 
-  // Ensure req.url starts with /api so Express routes always match under Vercel serverless functions, unless it's a news SSR route
-  if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/news')) {
+  const incoming = incomingPath(req)
+  const newsSlug = newsSlugFromPath(incoming)
+  if (newsSlug && req.method === 'GET' && !String(req.url || '').includes('/api/home/')) {
+    req.url = `/api/articles/og/${encodeURIComponent(newsSlug)}`
+  } else if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/news')) {
     req.url = `/api${req.url.startsWith('/') ? '' : '/'}${req.url}`
   }
 

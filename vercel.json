@@ -2,9 +2,22 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "dist/index.html"
+    },
+    "api/[...path].js": {
+      "includeFiles": "dist/index.html"
+    },
+    "api/ssr-news/[...slug].js": {
+      "includeFiles": "{dist/index.html,server/generated-spa.html}"
+    }
+  },
   "rewrites": [
+    { "source": "/favicon.ico", "destination": "/logo.png" },
+    { "source": "/news/:slug*", "destination": "/api/ssr-news/:slug*" },
+    { "source": "/api/articles/og/:slug*", "destination": "/api/ssr-news/:slug*" },
     { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/news/(.*)", "destination": "/api?__newsSlug=$1" },
     {
       "source": "/((?!api/|assets/|.*\\..*).*)",
       "destination": "/index.html"
@@ -43,6 +56,12 @@
     },
     {
       "source": "/logo.png",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
+      ]
+    },
+    {
+      "source": "/favicon.ico",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=86400" }
       ]

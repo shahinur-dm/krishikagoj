@@ -11,6 +11,7 @@ import { applyArticleSeoDefaults, slugify } from '../utils/seoContent.js'
 import Opinion from '../models/Opinion.js'
 import SiteSetting from '../models/SiteSetting.js'
 import { translateArticleFields } from '../utils/translator.js'
+import { renderArticleOgHtml } from '../utils/ssrOgMeta.js'
 
 const router = Router()
 
@@ -134,7 +135,7 @@ router.get('/', async (req, res) => {
       excludeCategory,
     } = req.query
     const filter = { isPublished: true }
-    const lim = Math.min(Number(limit) || 40, 100)
+    const lim = Math.min(Number(limit) || 20, 100)
     const skipN = Math.max(0, Number(skip) || 0)
     const excludeIds = String(exclude || '')
       .split(',')
@@ -645,6 +646,10 @@ router.get('/admin/:id', requireAuth, requirePermission('post', 'allpost'), asyn
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
+})
+
+router.get('/og/:idOrSlug', async (req, res) => {
+  return renderArticleOgHtml(req, res, req.params.idOrSlug)
 })
 
 router.get('/:idOrSlug', async (req, res) => {

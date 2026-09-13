@@ -17,11 +17,12 @@ import LayoutTopic from '../models/LayoutTopic.js'
 import { ensureDefaultLayoutTopics } from './layoutTopics.js'
 
 const router = Router()
-const CACHE_KEY = 'home:v43'
+const CACHE_KEY = 'home:v44'
 const CACHE_TTL = 5_000
+const NEWS_BATCH = 20
 
 const SLIM =
-  'title titleEn slug excerpt excerptEn body bodyEn image author views featured headline latest popular bigthumbnail publishedAt category subcategory'
+  'title titleEn slug excerpt excerptEn image author views featured headline latest popular bigthumbnail publishedAt category subcategory'
 
 function extractText(htmlOrText, maxLen = 800) {
   if (!htmlOrText) return ''
@@ -236,6 +237,28 @@ function slimSettings(s) {
   }
 }
 
+router.get('/news', async (req, res) => {
+  try {
+    const skip = Math.max(0, Number(req.query.skip) || 0)
+    const limit = Math.min(NEWS_BATCH, Math.max(1, Number(req.query.limit) || NEWS_BATCH))
+    const articles = await Article.find({ isPublished: true })
+      .select(SLIM)
+      .populate('category', 'name nameEn slug')
+      .populate('subcategory', 'nameBn nameEn slug')
+      .sort({ publishedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+    res.set('Cache-Control', 'public, max-age=5, s-maxage=15')
+    res.json({
+      items: articles.map((a) => slimArticle(a, 400)),
+      hasMore: articles.length === limit,
+    })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
+
 router.get('/', async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
@@ -270,19 +293,19 @@ router.get('/', async (req, res) => {
         .populate('category', 'name nameEn slug')
         .populate('subcategory', 'nameBn nameEn slug')
         .sort({ publishedAt: -1 })
-        .limit(160)
+        .limit(NEWS_BATCH)
         .lean(),
       Article.find({ isPublished: true, popular: true })
         .select(SLIM)
         .populate('category', 'name nameEn slug')
         .sort({ publishedAt: -1 })
-        .limit(20)
+        .limit(8)
         .lean(),
       Article.find({ isPublished: true })
         .select(SLIM)
         .populate('category', 'name nameEn slug')
         .sort({ views: -1 })
-        .limit(20)
+        .limit(8)
         .lean(),
       PhotoGallery.find().select('title photo type').sort({ createdAt: -1 }).limit(12).lean(),
       VideoGallery.find()
@@ -469,9 +492,10 @@ router.get('/', async (req, res) => {
       categories,
       headlines: headlines.length ? headlines : slimArts.slice(0, 16),
       featured: featuredOut.length ? featuredOut : slimArts.slice(0, 16),
-      latest: latest.length >= 12 ? latest : slimArts.slice(0, 40),
+      latest: latest.length >= 12 ? latest : slimArts.slice(0, NEWS_BATCH),
       popular: popular.length ? popular : slimArts.slice(0, 16),
-      recent: slimArts.slice(0, 40),
+      recent: slimArts.slice(0, NEWS_BATCH),
+      hasMoreNews: slimArts.length === NEWS_BATCH,
       leadLayout,
       byCategory,
       topicGrid,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, mapArticle, formatBnDate } from '../api/client'
 import SafeImage from '../components/SafeImage'
@@ -15,20 +15,28 @@ export default function SearchPage() {
   const [input, setInput] = useState(q)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState('')
+  const moreLock = useRef(false)
+  const moreRef = useRef(null)
 
   useEffect(() => {
     setInput(q)
     if (!q) {
       setItems([])
+      setHasMore(false)
       return undefined
     }
     let alive = true
     setLoading(true)
     api
-      .getArticles({ q, limit: '30' })
+      .getArticles({ q, limit: '20', skip: '0' })
       .then((data) => {
-        if (alive) setItems((data || []).map(mapArticle))
+        if (!alive) return
+        const next = (data || []).map(mapArticle)
+        setItems(next)
+        setHasMore(next.length === 20)
       })
       .catch((err) => {
         if (alive) setError(err.message)
@@ -40,6 +48,37 @@ export default function SearchPage() {
       alive = false
     }
   }, [q])
+
+  useEffect(() => {
+    if (!q || !hasMore || loading) return undefined
+    const el = moreRef.current
+    if (!el) return undefined
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting || moreLock.current) return
+        moreLock.current = true
+        setLoadingMore(true)
+        api
+          .getArticles({ q, limit: '20', skip: String(items.length) })
+          .then((data) => {
+            const fetched = (data || []).map(mapArticle)
+            setItems((prev) => {
+              const seen = new Set(prev.map((item) => item.id || item.slug))
+              return prev.concat(fetched.filter((item) => !seen.has(item.id || item.slug)))
+            })
+            setHasMore(fetched.length === 20)
+          })
+          .catch(() => {})
+          .finally(() => {
+            moreLock.current = false
+            setLoadingMore(false)
+          })
+      },
+      { rootMargin: '240px 0px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [q, hasMore, loading, items.length])
 
   function onSubmit(e) {
     e.preventDefault()
@@ -97,6 +136,11 @@ export default function SearchPage() {
               )
             })}
           </div>
+          {q && items.length > 0 ? (
+            <div ref={moreRef} className="px-3 pb-3">
+              {loadingMore ? <p className="text-muted mb-0">{t.loading}</p> : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

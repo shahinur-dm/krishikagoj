@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api, mapArticle, formatBnDate } from '../api/client'
 import SafeImage from '../components/SafeImage'
@@ -7,7 +7,7 @@ import { useSiteData } from '../context/SiteDataContext'
 import { useLang } from '../context/LanguageContext'
 import { orderArticlesByIds } from '../lib/sectionLayouts'
 
-const LIMIT = 12
+const LIMIT = 20
 
 function CalendarIcon() {
   return (
@@ -75,6 +75,8 @@ export default function CategoryPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [view, setView] = useState('card')
+  const moreLock = useRef(false)
+  const moreRef = useRef(null)
 
   useEffect(() => {
     let alive = true
@@ -120,21 +122,41 @@ export default function CategoryPage() {
   }, [site.popular, site.latest])
 
   async function loadMore() {
+    if (moreLock.current || loadingMore || !hasMore) return
+    moreLock.current = true
     setLoadingMore(true)
     try {
       const params = { category: slug, limit: LIMIT, skip: page * LIMIT }
       if (subSlug) params.subcategory = subSlug
       const articles = await api.getArticles(params)
       const fetchedItems = (articles || []).map(mapArticle)
-      setItems((prev) => [...prev, ...fetchedItems])
+      setItems((prev) => {
+        const seen = new Set(prev.map((item) => item.id || item.slug))
+        return prev.concat(fetchedItems.filter((item) => !seen.has(item.id || item.slug)))
+      })
       setHasMore(fetchedItems.length === LIMIT)
       setPage((p) => p + 1)
     } catch (err) {
       console.error(err)
     } finally {
+      moreLock.current = false
       setLoadingMore(false)
     }
   }
+
+  useEffect(() => {
+    if (!hasMore || loading) return undefined
+    const el = moreRef.current
+    if (!el) return undefined
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore()
+      },
+      { rootMargin: '240px 0px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, loading, page, slug, subSlug])
 
   if (loading) return <div className="container eb-loading">{t.loading}</div>
 
@@ -269,7 +291,7 @@ export default function CategoryPage() {
           )}
 
           {items.length > 0 && (
-            <div className="eb-load-more">
+            <div className="eb-load-more" ref={moreRef}>
               {hasMore ? (
                 <button type="button" onClick={loadMore} disabled={loadingMore}>
                     {loadingMore ? t.loading : t.more}

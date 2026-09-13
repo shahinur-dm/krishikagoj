@@ -3,12 +3,15 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import Article from '../models/Article.js'
 import Opinion from '../models/Opinion.js'
+import Media from '../models/Media.js'
+import SiteSetting from '../models/SiteSetting.js'
 import { stripHtml } from './seoContent.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function getBaseHtml() {
   const candidates = [
+    path.resolve(__dirname, '../generated-spa.html'),
     path.resolve(process.cwd(), 'dist', 'index.html'),
     path.resolve(process.cwd(), 'index.html'),
     path.resolve(__dirname, '../../dist/index.html'),
@@ -43,6 +46,67 @@ export function getCleanArticleSlug(article) {
     rawSlug.length >= 3 &&
     !/^[0-9a-fA-F]{24}$/.test(rawSlug)
   return isCleanAscii ? rawSlug : id
+}
+
+function guessImageType(url, mime = '') {
+  if (mime && mime.startsWith('image/')) return mime
+  const lower = String(url || '').toLowerCase()
+  if (lower.includes('.png') || lower.includes('image/png')) return 'image/png'
+  if (lower.includes('.webp')) return 'image/webp'
+  if (lower.includes('.gif')) return 'image/gif'
+  if (lower.includes('.svg')) return 'image/jpeg'
+  return 'image/jpeg'
+}
+
+function toAbsoluteUrl(raw, siteUrl) {
+  const value = String(raw || '').trim()
+  if (!value) return ''
+  if (value.startsWith('data:')) return ''
+  let url = value
+  if (!/^https?:\/\//i.test(url)) {
+    url = `${siteUrl}${url.startsWith('/') ? '' : '/'}${url}`
+  }
+  return url
+    .replace('https://krishikagoj-two.vercel.app', 'https://krishikagoj.com')
+    .replace('http://krishikagoj.com', 'https://krishikagoj.com')
+}
+
+function socialSafeUrl(url, siteUrl) {
+  const abs = toAbsoluteUrl(url, siteUrl)
+  if (!abs || /\.svg(\?|$)/i.test(abs) || abs.startsWith('data:')) {
+    return `${siteUrl}/logo.png`
+  }
+  return abs
+}
+
+async function resolveShareImage(rawImage, siteUrl) {
+  const fallback = `${siteUrl}/logo.png`
+  const raw = String(rawImage || '').trim()
+  if (!raw) {
+    try {
+      const settings = await SiteSetting.findOne().select('defaultNewsImage logo favicon').lean()
+      const candidate = settings?.defaultNewsImage || settings?.logo || settings?.favicon || ''
+      const safe = socialSafeUrl(candidate, siteUrl)
+      return { imgUrl: safe, imageType: guessImageType(safe, 'image/png') }
+    } catch {
+      return { imgUrl: fallback, imageType: 'image/png' }
+    }
+  }
+
+  const mediaId = raw.match(/\/api\/media\/([0-9a-fA-F]{24})/)?.[1] || (/^[0-9a-fA-F]{24}$/.test(raw) ? raw : null)
+  if (mediaId) {
+    try {
+      const media = await Media.findById(mediaId).select('secureUrl url mimeType').lean()
+      const direct = media?.secureUrl || media?.url || ''
+      if (direct && /^https?:\/\//i.test(direct) && !/\.svg(\?|$)/i.test(direct)) {
+        return { imgUrl: direct, imageType: guessImageType(direct, media?.mimeType) }
+      }
+    } catch {}
+    return { imgUrl: `${siteUrl}/api/media/${mediaId}`, imageType: 'image/jpeg' }
+  }
+
+  const imgUrl = socialSafeUrl(raw, siteUrl) || fallback
+  return { imgUrl, imageType: guessImageType(imgUrl) }
 }
 
 function getProductionSiteUrl(req) {
@@ -98,21 +162,41 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
       decoded = decodeURIComponent(rawIdOrSlug)
     } catch {}
 
+    const requestBlob = [
+      rawIdOrSlug,
+      decoded,
+      req.params?.idOrSlug,
+      req.url,
+      req.originalUrl,
+      req.headers['x-invoke-path'],
+      req.headers['x-vercel-original-url'],
+      req.headers['x-matched-path'],
+      req.query?.kkNews,
+      req.query?.__newsSlug,
+    ]
+      .filter(Boolean)
+      .join(' ')
+    const hexFromRaw = String(requestBlob).match(/[0-9a-fA-F]{24}/)?.[0] || null
     const isId = /^[0-9a-fA-F]{24}$/.test(rawIdOrSlug) || /^[0-9a-fA-F]{24}$/.test(decoded)
-    const targetId = isId ? (rawIdOrSlug.length === 24 ? rawIdOrSlug : decoded) : null
+    const targetId = isId ? (rawIdOrSlug.length === 24 ? rawIdOrSlug : decoded) : hexFromRaw
 
-    let article = await Article.findOne(
-      targetId
-        ? { _id: targetId }
-        : {
-            $or: [
-              { slug: rawIdOrSlug },
-              { slug: decoded },
-              { title: decoded },
-              { titleEn: decoded },
-            ],
-          },
-    ).lean()
+    const slugCandidates = [...new Set([rawIdOrSlug, decoded].filter(Boolean))]
+    let article = null
+    const ogSelect = 'title titleEn slug excerpt excerptEn metaDescription image publishedAt author body'
+    if (targetId) {
+      article = await Article.findOne({ _id: targetId }).select(ogSelect).lean()
+    }
+    if (!article) {
+      article = await Article.findOne({
+        $or: [
+          { slug: { $in: slugCandidates } },
+          { title: { $in: slugCandidates } },
+          { titleEn: { $in: slugCandidates } },
+        ],
+      })
+        .select(ogSelect)
+        .lean()
+    }
 
     if (!article && targetId) {
       const op = await Opinion.findById(targetId).lean()
@@ -131,6 +215,8 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
     }
 
     const baseHtml = getBaseHtml()
+    res.set('X-KK-OG-Lookup', String(targetId || rawIdOrSlug || '').slice(0, 80))
+    res.set('X-KK-OG-Found', article ? '1' : '0')
     if (!article) {
       return res.status(200).type('html').send(baseHtml)
     }
@@ -149,20 +235,8 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
     const cleanSlug = getCleanArticleSlug(article)
     const canonicalUrl = `${siteUrl}/news/${cleanSlug}`
 
-    const rawImg = article.image || '/logo.png'
-    let imgUrl = rawImg
-    if (!imgUrl.startsWith('http')) {
-      imgUrl = `${siteUrl}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`
-    }
-    if (imgUrl.includes('krishikagoj-two.vercel.app')) {
-      imgUrl = imgUrl.replace('https://krishikagoj-two.vercel.app', 'https://krishikagoj.com')
-    }
-
-    let imageType = 'image/jpeg'
-    if (imgUrl.endsWith('.png')) imageType = 'image/png'
-    else if (imgUrl.endsWith('.webp')) imageType = 'image/webp'
-    else if (imgUrl.endsWith('.gif')) imageType = 'image/gif'
-    else if (imgUrl.endsWith('.svg')) imageType = 'image/svg+xml'
+    const { imgUrl, imageType } = await resolveShareImage(article.image, siteUrl)
+    res.set('X-KK-OG-Image', String(imgUrl || '').slice(0, 200))
 
     let html = baseHtml
 
@@ -199,8 +273,13 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
     html = html.replace(/<meta\s+(?:property="og:[^"]*"|name="twitter:[^"]*")\s+content="[^"]*"\s*\/?>\s*/gi, '')
 
     // Open Graph & Twitter meta tags to inject
+    const logoUrl = `${siteUrl}/logo.png`
     const dynamicTags = [
+      `<link rel="icon" type="image/png" href="${escapeAttr(logoUrl)}" />`,
+      `<link rel="shortcut icon" href="${escapeAttr(logoUrl)}" />`,
+      `<link rel="apple-touch-icon" href="${escapeAttr(logoUrl)}" />`,
       `<meta property="og:site_name" content="${escapeAttr(siteName)}" />`,
+      `<meta property="og:logo" content="${escapeAttr(logoUrl)}" />`,
       `<meta property="og:type" content="article" />`,
       `<meta property="og:title" content="${escapeAttr(activeTitle)}" />`,
       `<meta property="og:description" content="${escapeAttr(desc)}" />`,
@@ -220,9 +299,10 @@ export async function renderArticleOgHtml(req, res, idOrSlug) {
       article.publishedAt ? `<meta property="article:published_time" content="${new Date(article.publishedAt).toISOString()}" />` : '',
     ].filter(Boolean).join('\n    ')
 
+    html = html.replace(/<link\s+rel="icon"[^>]*>\s*/i, '')
     html = html.replace('</head>', `    ${dynamicTags}\n  </head>`)
 
-    res.set('Cache-Control', 'public, max-age=10, s-maxage=60, stale-while-revalidate=120')
+    res.set('Cache-Control', 'public, max-age=0, s-maxage=0, must-revalidate')
     return res.status(200).type('html').send(html)
   } catch (err) {
     console.error('SSR OG Meta Error:', err)

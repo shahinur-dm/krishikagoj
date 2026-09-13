@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSiteData } from '../context/SiteDataContext'
 import LeadSection from '../components/LeadSection'
 import CategorySection, {
@@ -122,15 +122,33 @@ export default function HomePage() {
     loading,
     error,
     ready,
+    hasMoreNews,
+    loadingMoreNews,
+    loadMoreNews,
   } = useSiteData()
   const { t } = useLang()
   const [showRest, setShowRest] = useState(false)
+  const moreRef = useRef(null)
 
   useEffect(() => {
     if (!ready) return undefined
     const id = window.requestAnimationFrame(() => setShowRest(true))
     return () => window.cancelAnimationFrame(id)
   }, [ready])
+
+  useEffect(() => {
+    if (!ready || !showRest || !hasMoreNews) return undefined
+    const el = moreRef.current
+    if (!el) return undefined
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMoreNews()
+      },
+      { rootMargin: '240px 0px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ready, showRest, hasMoreNews, loadMoreNews, categoryBlocks])
 
   if (loading && !ready) {
     return (
@@ -305,6 +323,14 @@ export default function HomePage() {
       ) : null}
 
       {showRest && <PhotoGallerySection photos={photos} />}
+
+      {ready ? (
+        <div ref={moreRef} className="container">
+          {loadingMoreNews ? (
+            <p className="text-center text-muted mt-3 mb-0">{t.loading}</p>
+          ) : null}
+        </div>
+      ) : null}
     </>
   )
 }

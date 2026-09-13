@@ -31,34 +31,22 @@ const app = express()
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
+function extractNewsSsrSlug(req) {
+  const fromQuery = req.query?.__newsSlug || req.query?.ogNews || req.headers['x-news-slug']
+  if (fromQuery) return String(fromQuery)
+
+  const urlToCheck = `${req.originalUrl || ''} ${req.url || ''} ${req.path || ''} ${req.headers['x-matched-path'] || ''} ${req.headers['x-vercel-matched-path'] || ''}`
+  const match = urlToCheck.match(/\/(?:ssr-news|news)\/([^?#\s]+)/)
+  if (!match) return ''
+  const slug = match[1].split('/')[0]
+  if (!slug || slug === 'public') return ''
+  return slug
+}
+
 app.use(async (req, res, next) => {
-  let newsSlug =
-    req.query?.__newsSlug ||
-    req.headers['x-news-slug'] ||
-    null
+  const targetSlug = extractNewsSsrSlug(req)
 
-  if (!newsSlug && req.url && req.url.includes('__newsSlug=')) {
-    try {
-      const qIndex = req.url.indexOf('__newsSlug=')
-      if (qIndex !== -1) {
-        newsSlug = req.url.slice(qIndex + 11).split('&')[0]?.split('#')[0]
-      }
-    } catch {}
-  }
-
-  const urlToCheck = req.originalUrl || req.url || req.path || ''
-  const matchedPath = req.headers['x-matched-path'] || req.headers['x-vercel-matched-path'] || ''
-
-  let slugFromUrl = null
-  if (urlToCheck.includes('/news/')) {
-    slugFromUrl = urlToCheck.split('/news/')[1]?.split('?')[0]?.split('#')[0]
-  } else if (matchedPath.includes('/news/')) {
-    slugFromUrl = matchedPath.split('/news/')[1]?.split('?')[0]?.split('#')[0]
-  }
-
-  const targetSlug = newsSlug || slugFromUrl
-
-  if (req.method === 'GET' && targetSlug) {
+  if (req.method === 'GET' && targetSlug && !String(req.url || '').includes('/api/home/')) {
     try {
       await connectDb()
       return await renderArticleOgHtml(req, res, targetSlug)
